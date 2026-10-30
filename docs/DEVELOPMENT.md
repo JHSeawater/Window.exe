@@ -64,8 +64,13 @@
 | 콘텐츠 이름 변경 | 표시 이름만 바뀌며 식별자와 연결 대상은 유지 |
 
 - 기본 파일·프로그램은 식별자당 창 하나를 사용한다.
-- 창의 생명주기·앞뒤 순서·최소화·복원·위치·크기는 창 시스템이 관리한다.
-- 최소화 복원은 같은 아이콘의 더블클릭과 작업 표시줄 버튼을 같은 창에 연결한다. 작업 표시줄은 임시 상태 제공자 기준으로 구현했으며 실제 팀원 창과의 연결은 남아 있다.
+- 창의 생명주기·앞뒤 순서·최소화·복원·위치·크기는 `WindowManager`가 총괄한다:
+  - `Open(id)`: 창이 없으면 프리팹 생성, 이미 있으면 맨 앞으로 포커스 및 최소화 해제(`Enshow`).
+  - `Minimize(id)`: 창 `SetActive(false)` 및 상태를 `Minimized`로 보관.
+  - `Enshow(id)`: 최소화된 창 복원, `SetActive(true)` 및 최상단 포커스.
+  - `Close(id)`: 창 GameObject 파괴 및 프로세스 목록에서 제거.
+  - `ActiveProcesses`: 현재 열려 있는 `WindowProcess` 리스트를 노출하여 작업 표시줄에서 상태 조회 및 상호작용 지원.
+- 최소화 복원은 같은 아이콘의 더블클릭과 작업 표시줄 버튼을 같은 창에 연결한다. 작업 표시줄은 임시 상태 제공자 기준이며 실제 창 어댑터 연결은 남아 있다.
 - 팀원 창이 준비되기 전에는 임시 수신기로 전달된 식별자와 호출 횟수를 확인할 수 있다.
 - 통합 시 Canvas 기준 해상도·배율과 아이콘·창 영역의 표시 및 입력 순서를 맞춘다.
 - 작업 표시줄은 창 시스템의 확정 상태를 표시하고 조작 요청을 보낸다. 아래 계약을 임시 수신기와 실제 창 어댑터가 함께 사용하며, 창 상태를 별도 원본으로 중복 관리하지 않는다.
@@ -137,7 +142,7 @@
 
 실제 창이 준비되면 `ITaskbarWindowSource`를 구현하는 어댑터에서 스냅샷·확정 알림·요청을 같은 창 관리자로 연결하고 `TaskbarController.Bind(adapter)` 또는 Inspector의 Source Behaviour 참조를 사용한다. `TaskbarDemoSource`는 끄고 기존 `OpenRequested`·`OnOpenRequested` 중 한 경로를 실제 창 수신기에 연결한다. 창 제거·소유 관계·모달 차단·최대화 상태 및 원래 위치·크기의 보존은 실제 창 시스템이 관리한다.
 
-2026-10-30 원격 `977c011`의 창 구현을 코드·씬 기준으로 검토했다. `WindowManager`의 조회·상태 이벤트·조작 API는 존재하지만 아래의 UI 기반 창 구상과 달리 SpriteRenderer·2D TextMeshPro를 사용한다. 현재 Overlay 데스크톱과 바로 혼합할 수 없으며, 씬의 관리자·프리팹 등록과 실제 작업 표시줄 연결도 남아 있다. 원인·수정 제안·검증 경계는 [체크리스트 12장](IMPLEMENTATION_CHECKLIST.md#12-팀원-창-구현-원격-검토와-표시-문제)에 기록했다. 원격 변경은 아직 로컬에 병합하지 않았다.
+2026-10-30 원격 `977c011`의 창 구현을 코드·씬 기준으로 검토했다. `WindowManager`의 조회·상태 이벤트·조작 API는 존재하지만 아래의 UI 기반 창 구상과 달리 SpriteRenderer·2D TextMeshPro를 사용한다. 현재 Overlay 데스크톱과 바로 혼합할 수 없으며, 씬의 관리자·프리팹 등록과 실제 작업 표시줄 연결도 남아 있다. 원인·수정 제안·검증 경계는 [체크리스트 12장](IMPLEMENTATION_CHECKLIST.md#12-팀원-창-구현-원격-검토와-표시-문제)에 기록했다. 검토 당시에는 병합하지 않았으며 이후 작업 표시줄 공유를 위해 원격 변경을 함께 병합했다. 렌더링·입력·실제 창 어댑터 연결은 후속 작업으로 유지한다.
 
 신규 씬 생성에는 바가 포함된다. 기존 씬에는 **WINDOW.exe → Desktop → Add Taskbar to Open Desktop** 메뉴로 필요한 구성만 추가·저장한다. Play Mode·미저장 씬은 변경하지 않고, 바가 이미 있으면 중복 생성하지 않는다. 공유 대상 `Desktop.unity`에는 바·프리팹 참조·임시 소스·공통 영역을 저장했다.
 
@@ -156,7 +161,19 @@
 
 ## 5. UI·데이터 구조 [제안]
 
-- Canvas Scaler는 1920×1080 기준의 Scale With Screen Size를 사용한다.
+- 창 시스템은 순수 2D(`SpriteRenderer` 및 2D `TextMeshPro`) 기반으로 구현한다. Canvas 의존성을 없애고 2D Sorting Layer를 직접 제어한다.
+- 공통 창 부모 클래스(`Window`)에서 위치 이동(`MoveTo`, `Translate`), 크기 조절(`Resize`, `ResizeDelta`), 최소/최대 크기 클램핑을 처리한다.
+- 상단 메뉴 바(`WindowTitleBar`)와 8방향 리사이즈 핸들(`WindowResizeHandle`)이 자동 부착된다:
+  - 메뉴 바 드래그: 마우스로 상단 메뉴 바를 잡고 끌어 창 전체를 부드럽게 이동.
+  - 8방향 테두리/모서리 드래그: 상/하/좌/우 4개 변 및 4개 꼭짓점을 마우스로 잡고 끌어 실제 OS 창처럼 반대편이 고정된 채 자연스러운 리사이즈 지원 (최소/최대 크기 클램핑 포함).
+  - 조작 상호 배제 및 모서리 우선권: 모서리/변 판정이 메뉴 바 판정보다 우선순위를 가지며, 겹치는 경계 클릭 시 이동과 크기 조절이 동시 발생하는 현상을 차단한다.
+- 창 내부는 `Primary`와 `Secondary`가 1:1 동일 위치·크기로 겹쳐지는 오버레이 구조를 갖는다:
+  - `Primary`: 자식 클래스에서 내용 자유 구현. Sorting Layer `WindowFront`, Order 0으로 렌더링.
+  - `Secondary`: 스프라이트(`SpriteRenderer`) 전용 영역. Sorting Layer `WindowBack`, Order 0으로 렌더링. 특수 셰이더로만 보여지므로 항상 렌더링되며, 스프라이트 누락 시 투명 스프라이트 fallback 및 에러를 출력한다.
+- `Window` 파생 기본 클래스:
+  - `ImageWindow`: Primary에 `SpriteRenderer`를 두어 메인 스프라이트를 렌더링 (`SetPrimarySprite(Sprite)`).
+  - `NotepadWindow`: Primary에 배경 `SpriteRenderer`(Order 0)와 2D `TextMeshPro`(Order 1)를 두어 배경 이미지와 텍스트를 함께 렌더링 (`SetBackgroundSprite(Sprite)`, `SetText(string)`).
+- 빈 GameObject에 스크립트(`ImageWindow`, `NotepadWindow`)를 추가하면 `Primary` 및 `Secondary` 자식 오브젝트와 렌더러가 자동으로 생성 및 세팅된다.
 - 공통 창 프리팹에서 제목 표시줄 이동, 앞뒤 순서, 최대화·최소화·복원·크기 조절을 처리한다. 닫기 이벤트는 게임 규칙을 연결할 수 있도록 분리한다.
 - 기본 창 검증에서는 X를 일반 닫기로 사용한다. 목표 게임의 위험한 X는 이후 게임 상태와 경고를 연결할 때 적용한다.
 - 아이콘·파일 정보는 ScriptableObject로 분리하는 안이다. 이름·고정 식별자·아이콘·콘텐츠 종류·내용·상태별 변형을 관리한다.

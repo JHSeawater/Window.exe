@@ -1,4 +1,5 @@
 using UnityEngine;
+using WindowExe.Desktop.Desktop.Window;
 
 namespace WindowExe.Desktop
 {
@@ -21,7 +22,7 @@ namespace WindowExe.Desktop
         {
             LastItemId = itemId;
             RequestCount++;
-            Debug.Log("Desktop open requested: " + itemId, this);
+            WindowManager.Instance.Open(itemId);
         }
     }
 }
