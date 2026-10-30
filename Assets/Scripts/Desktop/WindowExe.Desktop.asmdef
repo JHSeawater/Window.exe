@@ -1,5 +1,9 @@
 {
   "name": "WindowExe.Desktop",
   "rootNamespace": "WindowExe.Desktop",
-  "references": ["Unity.ugui", "Unity.InputSystem"]
+  "references": [
+    "Unity.ugui",
+    "Unity.InputSystem",
+    "Unity.TextMeshPro"
+  ]
 }
