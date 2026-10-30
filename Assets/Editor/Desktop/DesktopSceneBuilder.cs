@@ -14,6 +14,47 @@ namespace WindowExe.Desktop.Editor
     {
         public const string ScenePath = "Assets/Scenes/Desktop.unity";
         public const string PrefabPath = "Assets/Prefabs/Desktop/DesktopIcon.prefab";
+        public const string TaskbarPrefabPath = "Assets/Prefabs/Desktop/TaskbarButton.prefab";
+
+        [MenuItem("WINDOW.exe/Desktop/Add Taskbar to Open Desktop")]
+        public static void AddTaskbarToOpenDesktop()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode first.");
+            var desktop = UnityEngine.Object.FindAnyObjectByType<DesktopController>();
+            if (desktop == null) throw new InvalidOperationException("Open a desktop scene first.");
+            var scene = desktop.gameObject.scene;
+            if (scene.isDirty) throw new InvalidOperationException("Save user scene changes first.");
+            InstallTaskbar(desktop);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void InstallTaskbar(DesktopController desktop)
+        {
+            var existing = desktop.GetComponentInChildren<TaskbarController>(true);
+            if (existing != null)
+            {
+                TaskbarUiFactory.ApplyAppearance(existing);
+                return;
+            }
+            EnsureFolder("Assets/Prefabs/Desktop");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TaskbarPrefabPath)?.GetComponent<TaskbarButtonView>();
+            if (prefab == null)
+            {
+                var template = TaskbarUiFactory.CreateButtonTemplate(null);
+                // Prefabs store configuration; runtime listeners are installed by Awake.
+                var saved = PrefabUtility.SaveAsPrefabAsset(template.gameObject, TaskbarPrefabPath);
+                UnityEngine.Object.DestroyImmediate(template.gameObject);
+                prefab = saved.GetComponent<TaskbarButtonView>();
+            }
+            var source = desktop.GetComponent<TaskbarDemoSource>();
+            if (source == null) source = desktop.gameObject.AddComponent<TaskbarDemoSource>();
+            source.Configure(desktop);
+            TaskbarUiFactory.Create(desktop, source, prefab);
+            Canvas.ForceUpdateCanvases();
+            desktop.GetComponent<DesktopWorkArea>().Apply();
+        }
 
         [MenuItem("WINDOW.exe/Desktop/Add Selection Box to Open Desktop")]
         public static void AddSelectionBoxToOpenDesktop()
@@ -101,6 +142,7 @@ namespace WindowExe.Desktop.Editor
             var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             events.GetComponent<EventSystem>().pixelDragThreshold = 8;
             Canvas.ForceUpdateCanvases();
+            InstallTaskbar(desktop);
             desktop.EnsureValidLayout();
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();

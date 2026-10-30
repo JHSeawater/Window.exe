@@ -8,10 +8,14 @@ namespace WindowExe.Desktop
         private Font font;
         private void Awake()
         {
-            font = Font.CreateDynamicFontFromOSFont(
+            foreach (var label in GetComponentsInChildren<Text>(true)) Apply(label);
+        }
+        public void Apply(Text label)
+        {
+            if (label == null) return;
+            if (font == null) font = Font.CreateDynamicFontFromOSFont(
                 new[] { "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Arial" }, 24);
-            if (font == null) return;
-            foreach (var label in GetComponentsInChildren<Text>(true)) label.font = font;
+            if (font != null) label.font = font;
         }
         private void OnDestroy()
         {

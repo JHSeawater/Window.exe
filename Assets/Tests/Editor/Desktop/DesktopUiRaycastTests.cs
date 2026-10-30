@@ -23,11 +23,13 @@ namespace WindowExe.Desktop.Tests
         private DesktopSelectionBox selectionBox;
         private readonly List<DesktopItemDefinition> extraDefinitions = new List<DesktopItemDefinition>();
         private EventSystem[] previousEventSystems;
+        private DesktopInputTestScope inputScope;
 
         [UnitySetUp]
         public IEnumerator SetUp()
         {
             yield return new EnterPlayMode();
+            inputScope = new DesktopInputTestScope();
             previousEventSystems = Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
             foreach (var previous in previousEventSystems) previous.enabled = false;
             root = new GameObject("RaycastTestCanvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
@@ -68,6 +70,8 @@ namespace WindowExe.Desktop.Tests
             if (events != null && events.name == "Events") Object.DestroyImmediate(events.gameObject);
             foreach (var previous in previousEventSystems)
                 if (previous != null) previous.enabled = true;
+            inputScope?.Dispose();
+            inputScope = null;
             yield return new ExitPlayMode();
         }
 
