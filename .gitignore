@@ -1,0 +1,60 @@
+# Unity generated folders
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Aa]ssets/AssetStoreTools*
+
+# IDE generated files
+.vs/
+.idea/
+.vscode/
+.gradle/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.opendb
+*.VC.db
+*.pdb
+*.mdb
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Crash reports and generated Unity data
+sysinfo.txt
+*.stacktrace
+/[Aa]ssets/[Ss]treamingAssets/aa*
+/[Aa]ssets/AddressableAssetsData/*/*.bin*
+/[Aa]ssets/AddressableAssetsData/*/*.json*
+/[Aa]ssets/AddressableAssetsData/link.xml*
+
+# Local credentials and environment settings
+.env
+.env.*
+!.env.example
+!.env.sample
+*.keystore
+*.jks
+.aws/
+
+# Local agent settings
+.codex/
+.agents/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
