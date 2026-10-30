@@ -19,7 +19,13 @@
 
 ## 어디부터 읽을까
 
-데스크톱을 실행하려면 Unity에서 `Assets/Desktop/Scenes/Desktop.unity`를 열고 Play Mode를 시작한다. 프로젝트를 여는 방법과 창 시스템 연결은 [개발 가이드](docs/DEVELOPMENT.md)에서 확인한다.
+데스크톱을 실행하려면 Unity에서 `Assets/Scenes/Desktop.unity`를 열고 Play Mode를 시작한다. 프로젝트를 여는 방법과 창 시스템 연결은 [개발 가이드](docs/DEVELOPMENT.md)에서 확인한다.
+
+`Assets`는 `Scripts`, `Editor`, `Tests`, `Prefabs`, `Data`, `Scenes`, `Art`, `Settings`처럼 역할별로 나누고, 각 역할 아래에 `Desktop` 같은 기능 폴더를 둔다. 새 파일의 위치와 Git 공유 규칙은 [개발 가이드의 Assets 폴더 배치](docs/DEVELOPMENT.md#assets-폴더-배치-확정--사용자-지정)를 따른다. 폴더 정리 후 확인 결과와 공유 상태는 [체크리스트 10장](docs/IMPLEMENTATION_CHECKLIST.md#10-assets-역할별-정리와-재검증)에서 확인한다.
+
+기본 데스크톱 구현·제공 아트·테스트는 `fab196a`로 공유했다. 이후 영역 선택·묶음 이동과 역할별 폴더 정리도 현재 코드에 포함되어 있다. 더블클릭은 고정 식별자의 열기 요청을 전달하며, 실제 창 생성·최소화 복원은 팀원 시스템 연결 후 동작한다. 최초 공유 시점의 검증 결과는 [구현 체크리스트 8장](docs/IMPLEMENTATION_CHECKLIST.md#8-1030-구현검증-결과와-공유-범위)에서 확인한다.
+
+빈 곳 클릭은 전체 선택 해제, 선택된 아이콘 드래그는 묶음 이동, Escape는 진행 중 조작 취소다. 추가 검증 결과는 [체크리스트 9장](docs/IMPLEMENTATION_CHECKLIST.md#9-영역-선택묶음-이동-추가-구현-결과), 현재 경로의 재검증은 10장에서 확인한다.
 
 - 게임이 어떤 내용인지 보려면 **GDD**를 읽는다.
 - 지금 본인·팀원이 무엇을 만들지 보려면 **구현 체크리스트 2~4장**을 읽는다.

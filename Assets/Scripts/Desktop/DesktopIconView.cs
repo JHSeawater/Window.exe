@@ -48,7 +48,7 @@ namespace WindowExe.Desktop
         {
             if (data.button != PointerEventData.InputButton.Left || desktop == null) return;
             suppressClick = false;
-            desktop.Select(this);
+            desktop.PressIcon(this);
         }
 
         public void OnPointerClick(PointerEventData data)
@@ -74,12 +74,15 @@ namespace WindowExe.Desktop
         public void OnEndDrag(PointerEventData data)
         {
             if (data.button == PointerEventData.InputButton.Left && desktop != null)
+            {
+                desktop.Drag(this, data);
                 desktop.EndDrag(this);
+            }
         }
 
         private void OnDisable()
         {
-            if (desktop != null) desktop.CancelDrag(this);
+            if (desktop != null) desktop.RemoveFromSelection(this);
         }
     }
 }

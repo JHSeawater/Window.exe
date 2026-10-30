@@ -4,6 +4,18 @@ namespace WindowExe.Desktop
 {
     public static class DesktopLayout
     {
+        public static Rect FromPoints(Vector2 a, Vector2 b) =>
+            Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+
+        public static Vector2 ClampPoint(Vector2 point, Rect area) =>
+            new Vector2(Mathf.Clamp(point.x, area.xMin, area.xMax), Mathf.Clamp(point.y, area.yMin, area.yMax));
+
+        public static bool Intersects(Rect a, Rect b) =>
+            a.width > 0 && a.height > 0 && b.width > 0 && b.height > 0 && a.Overlaps(b);
+
+        public static Rect Union(Rect a, Rect b) => Rect.MinMaxRect(
+            Mathf.Min(a.xMin, b.xMin), Mathf.Min(a.yMin, b.yMin), Mathf.Max(a.xMax, b.xMax), Mathf.Max(a.yMax, b.yMax));
+
         public static Rect BoundsInParent(RectTransform item, RectTransform parent)
         {
             var corners = new Vector3[4];

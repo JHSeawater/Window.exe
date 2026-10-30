@@ -10,10 +10,18 @@
 /[Rr]ecordings/
 /[Aa]ssets/AssetStoreTools*
 
-# Shared Unity baseline and desktop implementation
+# Shared Unity baseline and assets organized by role
 /Assets/*
-!/Assets/Desktop/
-!/Assets/Desktop.meta
+!/Assets/Scripts/
+!/Assets/Scripts.meta
+!/Assets/Editor/
+!/Assets/Editor.meta
+!/Assets/Tests/
+!/Assets/Tests.meta
+!/Assets/Data/
+!/Assets/Data.meta
+!/Assets/Prefabs/
+!/Assets/Prefabs.meta
 !/Assets/Art/
 !/Assets/Art.meta
 !/Assets/Scenes/
@@ -23,12 +31,34 @@
 !/Assets/Welcome/
 !/Assets/Welcome.meta
 
+# Share the desktop feature in each role; keep unrelated local files excluded
+/Assets/Scripts/*
+!/Assets/Scripts/Desktop/
+!/Assets/Scripts/Desktop.meta
+/Assets/Editor/*
+!/Assets/Editor/Desktop/
+!/Assets/Editor/Desktop.meta
+/Assets/Tests/*
+!/Assets/Tests/Editor/
+!/Assets/Tests/Editor.meta
+/Assets/Tests/Editor/*
+!/Assets/Tests/Editor/Desktop/
+!/Assets/Tests/Editor/Desktop.meta
+/Assets/Data/*
+!/Assets/Data/Desktop/
+!/Assets/Data/Desktop.meta
+/Assets/Prefabs/*
+!/Assets/Prefabs/Desktop/
+!/Assets/Prefabs/Desktop.meta
+
 # Share the desktop's source artwork; keep unrelated local artwork excluded
 /Assets/Art/*
 !/Assets/Art/Icon/
 !/Assets/Art/Icon.meta
 !/Assets/Art/Screen/
 !/Assets/Art/Screen.meta
+!/Assets/Art/Fonts/
+!/Assets/Art/Fonts.meta
 
 # Local prototype depends on scripts outside the shared baseline
 /Assets/Scenes/DesktopPrototype.unity

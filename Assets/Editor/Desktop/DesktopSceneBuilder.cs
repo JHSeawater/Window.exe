@@ -12,8 +12,25 @@ namespace WindowExe.Desktop.Editor
 {
     public static class DesktopSceneBuilder
     {
-        public const string ScenePath = "Assets/Desktop/Scenes/Desktop.unity";
-        public const string PrefabPath = "Assets/Desktop/Prefabs/DesktopIcon.prefab";
+        public const string ScenePath = "Assets/Scenes/Desktop.unity";
+        public const string PrefabPath = "Assets/Prefabs/Desktop/DesktopIcon.prefab";
+
+        [MenuItem("WINDOW.exe/Desktop/Add Selection Box to Open Desktop")]
+        public static void AddSelectionBoxToOpenDesktop()
+        {
+            if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play Mode first.");
+            var desktop = UnityEngine.Object.FindAnyObjectByType<DesktopController>();
+            if (desktop == null || desktop.IconArea == null)
+                throw new InvalidOperationException("Open a desktop scene first.");
+            var scene = desktop.gameObject.scene;
+            if (scene.isDirty) throw new InvalidOperationException("Save modified scenes before updating the desktop.");
+            var box = desktop.GetComponentInChildren<DesktopSelectionBox>(true);
+            if (box == null) box = DesktopSelectionBox.Create(desktop.IconArea);
+            desktop.ConfigureSelectionBox(box);
+            EditorUtility.SetDirty(desktop);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
 
         [MenuItem("WINDOW.exe/Desktop/Create or Open Desktop")]
         public static void CreateOrOpen()
@@ -27,9 +44,9 @@ namespace WindowExe.Desktop.Editor
                 EditorSceneManager.OpenScene(ScenePath);
                 return;
             }
-            EnsureFolder("Assets/Desktop/Scenes");
-            EnsureFolder("Assets/Desktop/Prefabs");
-            EnsureFolder("Assets/Desktop/Data");
+            EnsureFolder("Assets/Scenes");
+            EnsureFolder("Assets/Prefabs/Desktop");
+            EnsureFolder("Assets/Data/Desktop");
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var camera = new GameObject("Main Camera", typeof(Camera)).GetComponent<Camera>();
             camera.tag = "MainCamera";
@@ -57,6 +74,7 @@ namespace WindowExe.Desktop.Editor
             var windows = Rect("WindowLayer", canvasObject.transform, Vector2.zero, Vector2.zero);
             Stretch(windows);
             desktop.Configure(area, windows);
+            desktop.ConfigureSelectionBox(DesktopSelectionBox.Create(area));
             canvasObject.AddComponent<DesktopFont>();
             canvasObject.AddComponent<DesktopOpenRequestProbe>().Configure(desktop);
 
@@ -91,7 +109,7 @@ namespace WindowExe.Desktop.Editor
 
         private static DesktopItemDefinition Item(string id, string title, string imagePath)
         {
-            var path = "Assets/Desktop/Data/" + id + ".asset";
+            var path = "Assets/Data/Desktop/" + id + ".asset";
             var existing = AssetDatabase.LoadAssetAtPath<DesktopItemDefinition>(path);
             if (existing != null) return existing;
             var importer = (TextureImporter)AssetImporter.GetAtPath(imagePath);
