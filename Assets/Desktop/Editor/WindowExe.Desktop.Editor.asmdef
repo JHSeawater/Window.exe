@@ -1,0 +1,5 @@
+{
+  "name": "WindowExe.Desktop.Editor",
+  "references": ["WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem"],
+  "includePlatforms": ["Editor"]
+}

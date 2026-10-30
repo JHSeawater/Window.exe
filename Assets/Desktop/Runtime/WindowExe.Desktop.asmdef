@@ -1,0 +1,5 @@
+{
+  "name": "WindowExe.Desktop",
+  "rootNamespace": "WindowExe.Desktop",
+  "references": ["Unity.ugui", "Unity.InputSystem"]
+}

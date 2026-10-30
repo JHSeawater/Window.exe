@@ -6,19 +6,20 @@
 
 ## 1. 개발 환경과 프로젝트 열기
 
-공유 프로젝트 기준은 Unity **6000.6.7f1**, URP 2D, Input System이며 기본 씬은 `Assets/Scenes/SampleScene.unity`다.
+공유 프로젝트 기준은 Unity **6000.6.7f1**, URP 2D, Input System이다. 데스크톱 실행 씬은 `Assets/Desktop/Scenes/Desktop.unity`, 기존 템플릿 씬은 `Assets/Scenes/SampleScene.unity`다.
 
 1. 저장소를 클론한다.
 2. Unity Hub의 **Add → Add project from disk**로 저장소 폴더를 등록한다.
 3. Unity **6000.6.7f1**로 열고 패키지 설치·에셋 임포트가 끝날 때까지 기다린다.
-4. `Assets/Scenes/SampleScene.unity`를 연다.
+4. `Assets/Desktop/Scenes/Desktop.unity`를 열고 Play Mode를 시작한다.
 
 **[확정] 가짜 데스크톱 방식**을 사용한다. 실제 OS 다중 창 대신 Unity 화면 안의 UI로 표현하여 발표 환경의 차이를 줄이고 전체 화면 연출을 다룬다.
 
 ## 2. Git 공유 규칙 [확정]
 
-- `Assets`에서는 `Scenes`, `Settings`, `Welcome`과 각 폴더의 `.meta`만 Git에 포함한다.
-- 나머지 에셋 폴더와 `.meta`는 로컬에 보존하되 `.gitignore`로 제외한다. 구현 파일 공유 시 팀원과 폴더 구조를 맞추고 제외 규칙을 변경한다.
+- 사용자 커밋·푸시 요청에 따라 `Assets/Desktop`, `Assets/Art/Icon`, `Assets/Art/Screen`과 관련 폴더의 `.meta`를 Git 공유 범위에 포함한다. 기존 `Scenes`, `Settings`, `Welcome`도 유지한다.
+- `Assets/Desktop`의 코드·에디터 도구·테스트·프리팹·데이터·씬을 함께 공유한다. 씬이 참조하는 스크립트와 아트가 빠지지 않게 한다.
+- 나머지 에셋 폴더와 `.meta`는 로컬에 보존하되 `.gitignore`로 제외한다. 새 범위의 파일을 공유할 때에도 필요한 의존성과 `.meta`를 함께 확인한다.
 - `Assets/Scenes/DesktopPrototype.unity`와 해당 `.meta`는 공유되지 않는 스크립트를 참조하므로 제외한다.
 - 로컬 에디터 도구가 생성한 `ProjectSettings/Packages/com.unity.pipeline/`과 `ProjectSettings/SceneTemplateSettings.json`은 제외한다.
 - `Library`, `Temp`, `Logs`, `UserSettings`, IDE 생성 파일은 각 환경에서 재생성한다.
@@ -86,3 +87,68 @@
 - 화면 효과가 필수 문구를 가리거나 UI 입력을 막지 않게 한다.
 
 리소스별 제작 기록과 적용 확인은 [구현 체크리스트 6장](IMPLEMENTATION_CHECKLIST.md#6-이후--자료리소스--담당-미정)에서 관리한다.
+
+## 7. 데스크톱 구현 구조와 처리 순서
+
+10/30 사용자 담당 작업의 로컬 구현 구조다. 팀원 창과의 최종 연결 형식은 여전히 제안이며, 구현 순서는 [제작 계획 5장](PRODUCTION_PLAN.md#5-1030-사용자-담당-구현-순서-제안), 완료 상태는 구현 체크리스트에서 관리한다.
+
+### 기존 파일의 취급
+
+공유 씬 `SampleScene.unity`는 기본 카메라·조명 상태를 유지한다. 기존 `DesktopIcon.cs`의 입력 처리 방식과 프로토타입의 UI 구성 방식을 참고하고, 창 생성에 묶여 있던 데스크톱 책임을 분리해 `Assets/Desktop`에 구현했다.
+
+대체된 프로토타입 코드·테스트·씬·데이터와 각 `.meta` 30개는 `Assets`에서 제거하고 `Builds/PrototypeArchive/Assets/`에 원래 상대 경로로 보존했다. 당시 열려 있던 프로토타입 씬의 미저장 변경도 저장한 뒤 보관했다. 새 구현은 과거 프로토타입 어셈블리에 의존하지 않는다.
+
+### 구성 요소
+
+런타임 코드는 `Assets/Desktop/Runtime`, 생성 도구는 `Editor`, 검증 코드는 `Tests/Editor`에 둔다.
+
+| 요소 | 책임 |
+|---|---|
+| `DesktopItemDefinition` | 고정 식별자·표시 이름·아이콘 이미지의 ScriptableObject 데이터 |
+| `DesktopIconView` | 아이콘·이름·선택 표시, 포인터 입력을 받아 컨트롤러에 전달 |
+| `DesktopController` | 선택된 아이콘 하나, 클릭·드래그 상태, 열기 요청 전달 관리. 아이콘 위치는 씬 인스턴스의 RectTransform에 유지 |
+| `DesktopLayout` | 바탕화면 좌표·배치 영역 계산, 화면 경계 제한, 다른 아이콘과의 겹침 판정 |
+
+Canvas의 바탕화면·아이콘 영역과 창 영역을 분리하고, 창 영역이 아이콘보다 위에서 입력을 받도록 맞춘다. 입력을 소비하는 배경은 바탕화면 영역에만 두어 빈 창 영역 전체가 아이콘을 막지 않게 한다. 처음에는 임시 이미지·이름으로 아이콘을 만들고, 같은 프리팹·데이터에서 최종 아트를 교체할 수 있게 한다.
+
+아이콘의 초기 위치는 씬이나 별도 배치 설정에서 지정하고, 이동 후 위치는 실행 중 상태로 보관한다. 창을 열고 닫는 동작이 아이콘을 다시 생성하거나 초기 위치로 되돌리지 않게 한다. 디스크 저장은 별도 후순위다.
+
+### 입력과 배치 처리
+
+1. 왼쪽 버튼을 누르면 대상 아이콘과 포인터 시작 위치를 기록한다. 작은 움직임은 클릭으로 남긴다.
+2. 이동 거리가 기준을 넘으면 드래그 상태로 전환하고, 원래 아이콘 위치와 처음 잡은 지점의 차이를 보관한다.
+3. 포인터를 아이콘 부모의 좌표로 변환해 후보 위치를 계산한다. 화면 픽셀 이동량을 UI 위치에 그대로 더하지 않는다.
+4. 아이콘 이미지·이름을 포함한 영역이 바탕화면 안에 있도록 제한하고, 놓을 때 다른 아이콘과의 겹침을 검사한다.
+5. 유효한 위치만 확정한다. 겹치면 원위치로 돌리는 안을 적용할 경우에는 4장의 규칙을 따른다.
+6. 드래그로 처리한 입력은 클릭·더블클릭 처리에서 제외한다. 같은 아이콘에 대한 정상적인 더블클릭만 열기 요청을 한 번 보낸다.
+
+더블클릭 판정은 한 곳에서 처리하여 기본 클릭 횟수와 별도 타이머가 중복으로 실행 요청을 만들지 않게 한다. 창이 가로챈 입력은 아이콘 컨트롤러가 다시 처리하지 않는다.
+
+### 창 시스템 연결과 확인
+
+열기 요청은 `DesktopController.OpenRequested` C# 이벤트와 Inspector용 `OnOpenRequested`의 `UnityEvent<string>`으로 제공한다. 한 수신기는 둘 중 한 경로만 구독해 같은 요청을 중복 처리하지 않는다. 아이콘에 창 생성 코드를 직접 넣지 않는다. `DesktopOpenRequestProbe`는 식별자·전달 횟수와 Console 로그를 확인하는 임시 수신기다. 가림 확인용 패널은 테스트에서만 생성하며 창 이동·최소화 기능은 제작하지 않았다.
+
+배치 판정은 겹치는 드롭·경계에 닿은 드롭·정상 드롭의 대표 경우를 확인하고, 실제 입력은 빠른 더블클릭·작은 흔들림·드래그 후 클릭으로 확인한다. 최종 단계에서는 1920×1080과 1280×720 등 다른 화면 크기, UI 배율 변경, 창 가림·복원·재열기를 확인한다. 자동 검증을 추가한다면 좌표·배치 판정처럼 UI 없이 확인할 수 있는 부분에 집중한다.
+
+데스크톱 전용 코드·프리팹·데이터·검증 씬은 `Assets/Desktop`에 분리했다. 사용자 커밋·푸시 요청으로 이 폴더와 배경·아이콘 아트의 Git 공유 범위를 열었다. 빌드·검증 로그·프로토타입 보관본은 기존대로 `Builds` 아래의 로컬 결과물로 유지한다.
+
+## 8. 데스크톱 실행과 연결
+
+1. `Assets/Desktop/Scenes/Desktop.unity`를 연다. 메뉴 **WINDOW.exe → Desktop → Create or Open Desktop**으로도 열 수 있다.
+2. Play Mode를 시작한다. 배경과 휴지통·메모·사진·인터넷 아이콘이 표시된다.
+3. 더블클릭은 현재 Console에 `Desktop open requested: 식별자`를 기록한다. 실제 창은 팀원 시스템을 연결한 뒤 열린다.
+
+| 파일·요소 | 용도 |
+|---|---|
+| `Assets/Desktop/Prefabs/DesktopIcon.prefab` | 공통 선택 표시·이미지·이름·입력 처리 |
+| `Assets/Desktop/Data/*.asset` | `recycle-bin`, `memo`, `photos`, `internet`의 4개 콘텐츠 정의 |
+| 씬의 `DesktopCanvas/IconArea` | 아이콘 배치 영역 |
+| 씬의 `DesktopCanvas/WindowLayer` | 팀원 창을 배치할 상위 UI 영역. 빈 영역 자체는 입력을 막지 않음 |
+| `DesktopController.OpenRequested` | 창 수신기에 전달할 고정 식별자 이벤트 |
+| `Builds/Desktop/Desktop.exe` | Windows 검증 빌드 |
+
+데이터를 추가하려면 **Create → WINDOW.exe → Desktop Item**으로 고정 ID·이름·이미지를 지정하고 공통 프리팹의 `DesktopIconView.Configure`로 연결한다. ID는 서로 달라야 한다. 표시 이름만 바꿀 때는 `SetDisplayName`을 사용한다.
+
+아이콘 PNG는 전체 파일이 한 이미지로 보이도록 Sprite Single 모드로 사용한다. 자동 분할된 앨범·인터넷 이미지의 그림자 조각만 연결되는 문제를 수정했다. 원본 PNG 픽셀은 변경하지 않았다. 한글 이름은 실행 시 OS 한글 글꼴을 사용하며, 배경은 제공된 1672×941 파일을 그대로 사용한다. 1920×1080 배경 재제작은 별도 리소스 작업이다.
+
+자동 검증은 Test Runner에서 `WindowExe.Desktop.Tests`를 선택한다. 14개 통과를 확인했으며 이 중 3개는 실제 Play Mode의 UI 가림·빈 바탕화면·Input System 입력을 다룬다. Windows 빌드는 경고·오류 없이 성공했고, 1280×720과 1920×1080으로 실행해 시작 오류가 없음을 확인했다. 실행 로그는 `Builds/DesktopValidation/player-*.log`에 있다. 팀원의 실제 창을 통한 열기·중복 방지·최소화 복원·재열기는 아직 연결하지 않았다.

@@ -1,0 +1,6 @@
+{
+  "name": "WindowExe.Desktop.Tests",
+  "references": ["WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

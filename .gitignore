@@ -10,14 +10,25 @@
 /[Rr]ecordings/
 /[Aa]ssets/AssetStoreTools*
 
-# Shared Unity baseline: keep local work until implementation is coordinated
+# Shared Unity baseline and desktop implementation
 /Assets/*
+!/Assets/Desktop/
+!/Assets/Desktop.meta
+!/Assets/Art/
+!/Assets/Art.meta
 !/Assets/Scenes/
 !/Assets/Scenes.meta
 !/Assets/Settings/
 !/Assets/Settings.meta
 !/Assets/Welcome/
 !/Assets/Welcome.meta
+
+# Share the desktop's source artwork; keep unrelated local artwork excluded
+/Assets/Art/*
+!/Assets/Art/Icon/
+!/Assets/Art/Icon.meta
+!/Assets/Art/Screen/
+!/Assets/Art/Screen.meta
 
 # Local prototype depends on scripts outside the shared baseline
 /Assets/Scenes/DesktopPrototype.unity
