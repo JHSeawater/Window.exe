@@ -25,6 +25,7 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private Sprite borderSprite;
         private SpriteRenderer borderRenderer;
         private bool isRightBorderBroken;
+        private bool isBothBordersBroken;
         private SpriteRenderer secondary;
         private WindowTitleBar titleBar;
         private WindowResizeHandle resizeHandle;
@@ -49,7 +50,8 @@ namespace WindowExe.Desktop.Desktop.Window
         public float BorderThickness => borderThickness;
         public Color BorderColor => borderColor;
         public SpriteRenderer BorderRenderer => borderRenderer;
-        public bool IsRightBorderBroken => isRightBorderBroken;
+        public bool IsRightBorderBroken => isRightBorderBroken || isBothBordersBroken;
+        public bool IsBothBordersBroken => isBothBordersBroken;
         public SpriteRenderer SecondaryRenderer => secondary;
         public WindowInteraction CurrentInteraction { get; internal set; }
         public event System.Action<Window> OnCloseRequested;
@@ -106,7 +108,12 @@ namespace WindowExe.Desktop.Desktop.Window
         protected virtual void UpdateBorderLayout(Vector2 value)
         {
             if (borderRenderer == null) return;
-            if (isRightBorderBroken)
+            if (isBothBordersBroken)
+            {
+                borderRenderer.transform.localPosition = new Vector3(0, BarHeight / 2f, 0);
+                borderRenderer.size = new Vector2(value.x, value.y + BarHeight + borderThickness * 2f);
+            }
+            else if (isRightBorderBroken)
             {
                 borderRenderer.transform.localPosition = new Vector3(-borderThickness / 2f, BarHeight / 2f, 0);
                 borderRenderer.size = new Vector2(value.x + borderThickness, value.y + BarHeight + borderThickness * 2f);
@@ -121,6 +128,11 @@ namespace WindowExe.Desktop.Desktop.Window
         public virtual void SetRightBorderBroken(bool broken)
         {
             isRightBorderBroken = broken;
+            UpdateBorderLayout(size);
+        }
+        public virtual void SetBothBordersBroken(bool broken)
+        {
+            isBothBordersBroken = broken;
             UpdateBorderLayout(size);
         }
         public void SetBorder(bool show, float thickness, Color color, Sprite sprite = null)

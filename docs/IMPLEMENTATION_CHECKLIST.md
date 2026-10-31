@@ -777,3 +777,38 @@ Ryzen 7 7735HS·Radeon 680M·Direct3D12에서 동일한 Development/Instrumented
 - [ ] 공유 Unity의 다른 명령 점유·시간초과로 자동 검증 결과를 확인하지 못했다. 통과로 보고하지 않으며 이번 변경의 실행 파일 빌드는 수행하지 않았다.
 
 기존 아이콘 매핑 시험의 대상도 삭제한 `photos` 대신 `peep-window`로 갱신했다. 변경 전 파일은 `Builds/DesktopIconUpdate/Before/`에 보관한다. 초기 정렬의 기술 방식은 개발 가이드의 바탕화면 기본 아이콘 정리 항목을 따른다.
+
+## 30. 총알 궤적·도탄 연출, 양쪽 테두리 관통 파괴 및 독립 열쇠 수명 관리 — 2026-10-31
+
+사용자 추가 피드백 및 결정에 따라 총알 궤적 표시, WINDOW.exe 미충족 시 열쇠 창 우측 테두리 도탄(Ricochet) 연출 및 효과음 재생, 양쪽 테두리 동시 관통 파괴(`SetBothBordersBroken`), 깨진 기본 크랙 오버레이 배제, 열쇠 오브젝트 독립화(`ExtractedKeyEntity`) 및 생명주기 분리, 기획용 사전 설정(Inspector) 옵션을 구현하고 Unity CLI EditMode 단위 테스트로 검증했다.
+
+- [x] `InternetWindow.cs` 총알 궤적(`BulletTracer`) 및 도탄(Ricochet) 연출 구현:
+  - 총 발사 시 총구가 `WINDOW.exe` 내부에 덮여 있을 때만 사격 허용(`requireMuzzleInWindowExeToShoot`, 기본 `true`). 총구가 밖에 있으면 클릭해도 사격 불발(무반응, 사운드/흔들림/궤적 없음).
+  - 총구 사격 허용 시 총 반동 흔들림(`IsGunShaking`) 및 발사 사운드(`HanoiSoundType.Shot` / `빵야.mp3`)를 재생.
+  - 총구에서 뻗어나가는 듀얼 레이어(`WindowFront`/`WindowBack`, `order = 32000`) 슬라이스 단색 탄도 라인을 생성하고 `bulletTrailDuration`(0.20s) 동안 페이드아웃 후 자동 소멸.
+  - **관통(성공):** 총구와 열쇠 창이 모두 `WINDOW.exe`에 덮여 있고 열쇠 창이 총구 왼쪽에 위치할 때, 총알 궤적이 열쇠 창 우측 및 좌측 테두리를 관통해 지나가며 `targetKeyWindow.BreakBothBorders()` 호출.
+  - **도탄(실패):** 총구는 덮였으나 열쇠 창이 덮여 있지 않은 경우, 열쇠 창은 깨지지 않고 총알 궤적이 열쇠 창 우측 테두리 표면(`rightEdgeX`)에 맞고 대각선 위로 튕겨 나가는 도탄 궤적을 그리며 도탄 효과음(`HanoiSoundType.Ricochet` / `gunRicochetClip`, 레트로 메탈릭 톤 / `삑.mp3`) 재생. `LastShotWasRicochet` 및 탄도 좌표 기록.
+- [x] `Window.cs` 및 `ImageWindow.cs` 양쪽 테두리 관통 파괴(`SetBothBordersBroken`) 구현:
+  - 가로 추가 두께를 완전히 제거하여 `size.x = value.x`로 설정하고 중심을 `(0, BarHeight / 2f, 0)`로 이동하여 좌우 테두리를 모두 감추고 상/하 테두리만 남는 관통 터널 형태 적용.
+  - 우측 및 좌측 테두리가 각각 7개(총 14개)의 선분 조각(`DebrisPiece`)으로 나뉘어 관통 방향인 창 안쪽/왼쪽(`-X`)으로 튕겨 나가며 중력에 의해 무너져 내리는 물리 연출 적용.
+- [x] `ImageWindow.cs` 크랙 오버레이 기본 비우기:
+  - 기본 절차적 크랙 생성을 제거하고 `brokenOverlaySprite`가 할당된 경우에만 오버레이를 활성화하도록 수정하여, 투명 에셋이 생기기 전까지 열쇠 이미지가 깔끔하게 드러나도록 처리.
+- [x] `ExtractedKeyEntity.cs` 및 `ImageWindow.cs` 열쇠 독립 엔티티화, 휴지통 연결 해제 및 복원 창 연동:
+  - **조작 조건:** 열쇠 창이 깨져 있고(`IsBorderBroken`), 열쇠 창의 테두리가 아니라 **열쇠 오브젝트 자체(아이콘 중심점 또는 클릭 지점)**가 `WINDOW.exe` 내부에 포함(`IsKeyObjectInsideWindowExe`)되어 있으면 열쇠 창의 안/밖 상태와 무관하게 조작 가능.
+  - **휴지통 연결점 완전 삭제:** 기존 열쇠-휴지통 드롭 판정(`IsPointOverRecycleBin`)을 제거하고, 새로 추가된 복원 윈도우(`RepairWindow`)에 드롭했을 때만 상호작용하도록 연동.
+  - **수명 분리 및 소모 옵션:**
+    - 창 밖으로 꺼내기 전: 열쇠는 창의 소유이며, 열쇠 창을 닫으면 열쇠도 창과 함께 소멸.
+    - 창 밖으로 꺼낸 후: 열쇠는 독립 월드 엔티티(`ExtractedKeyEntity`)로 승격되어 창이 닫혀도 유지.
+    - `consumeKeyOnUse` (`RepairWindow`, 기본 `true`): 복원 창에 사용 시 소모(파괴)할지 여부. `false`일 때는 사용 후에도 드롭 위치에 독립 엔티티로 유지됨.
+  - **사전 설정 옵션 (Inspector):**
+    - `requireMuzzleInWindowExeToShoot` (`InternetWindow`, 기본 `true`): 총구가 WINDOW.exe 안에 덮여 있어야 사격 가능 여부 (false면 외부에서도 격발 및 도탄 가능).
+    - `requireWindowExeToExtractFromWindow` (`ImageWindow`, 기본 `true`): 창 안에서 처음 꺼낼 때 열쇠가 WINDOW.exe 안에 포함되어야 드래그 가능 여부.
+    - `requireWindowExeToDragWhenOutside` (`ImageWindow`, 기본 `false`): 창 밖으로 완전히 꺼낸 후에도 WINDOW.exe 비춤 필수 여부.
+    - `preventDraggingKeyOutsideWindowExe` (`ImageWindow`, 기본 `false`): WINDOW.exe 안에서 열쇠를 드래그할 때 WINDOW.exe 경계 밖으로 끌고 나가지 못하게 차단(클램프)할지 여부.
+    - `persistExtractionOnReopen` (`ImageWindow`, 기본 `true`): 이미 꺼낸 상태에서 열쇠 창 재오픈 시 빈 창 유지 여부.
+- [x] `FolderWindow.cs` (휴지통 폴더 윈도우) 및 `RepairWindow.cs` (복원 윈도우) 신규 구현:
+  - **`FolderWindow`:** `recycle-bin.prefab`에 장착되어 바탕화면 휴지통 아이콘 오픈 시 표시됨. 내부 실행 앱 아이콘(기본 `"복원.exe"`) 더블클릭 시 `WindowManager`를 통해 `"repair"` 창을 오픈.
+  - **`RepairWindow`:** `RepairWindow.prefab` 제작 및 `WindowManager`에 `"repair"` 프리팹 등록. `WindowFront`/`WindowBack` 듀얼 레이어로 이미지를 렌더링하며, 미할당 시에도 플레이스홀더를 기본 제공. 열쇠 드롭 시 `initialSprite`에서 `secondSprite`로 교체 및 `OnKeyUsed` 이벤트 발생.
+- [x] Unity CLI (`6000.6.7f1`) EditMode 테스트 검증:
+  - `WindowBorderTests` 15건 전체 통과 (`BrokenKeyWindowAllowsDraggingKeyImageOutAndDroppingIntoRepairWindowReplacesImage`, `RepairWindowRetainsKeyAtDropPositionWhenConsumeKeyOnUseIsFalse`, `FolderWindowDoubleClickExecutesTargetRepairWindow` 등 신규 검증 포함).
+  - `InternetWindowTests` 9건 전체 통과. 총 **24/24 테스트 통과**.

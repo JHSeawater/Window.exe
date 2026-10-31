@@ -1254,26 +1254,54 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
   - **총 결과 (`ResultGun`):** 해독된 3번째 검색 기록("총") 클릭 시 전환되며, 인터넷 창 위에 `gunResultSprite`를 덧씌운다. 인스펙터에서 `gunResultSize` 및 `gunResultOffset`으로 크기와 위치를 수동 조절할 수 있다.
   - 두 결과 이미지 모두 `WindowFront`와 `WindowBack` 양쪽 렌더러에 배치되어, `WINDOW.exe` 창을 위에 올려놓아도 창이 뚫리지 않고 이미지가 정상적으로 투시된다. 미할당 시에는 렌더러가 비활성화된다.
 
-## 20. 총 발사·열쇠 창 오른쪽 테두리 파괴 및 열쇠 드래그 앤 드롭 (`InternetWindow` · `Window` · `ImageWindow`)
+## 20. 총 발사·도탄·양쪽 테두리 관통 파괴 및 독립 열쇠 수명 관리 (`InternetWindow` · `Window` · `ImageWindow` · `ExtractedKeyEntity`)
 
-- **총 발사 및 중첩·방향 조건 (`InternetWindow.cs`):**
+- **총 발사 및 관통·도탄(Ricochet) 궤적 연출 (`InternetWindow.cs`):**
   - 인터넷 창 Phase 3(`InternetPhase.ResultGun`)의 총(`Gun Chong.png`, 항상 왼쪽을 향함)을 클릭했을 때 `TryShootGun()`이 호출된다.
-  - 발사 성립 조건(`CanShootKeyWindow`):
-    1. 총구 좌표(`GetGunMuzzleWorldPosition()`, 기본 정규화 오프셋 `(-0.38, 0.24)`)가 `WINDOW.exe`(`WindowExeWindow`, ID `"window"`)의 `OuterBounds` 내부에 덮여 있어야 한다.
-    2. 열쇠 창(`ImageWindow`, 기본 ID `"key-image"`) 역시 `WINDOW.exe`의 `OuterBounds`와 겹쳐 덮여 있어야 한다.
-    3. 총이 왼쪽을 향하므로 열쇠 창의 바운드가 총구 좌표의 **왼쪽**(`keyBounds.xMin < muzzlePos.x && keyBounds.center.x < muzzlePos.x`)에 위치해야 한다.
-  - 조건 충족 시 총이 발사되며 총 이미지가 반동으로 흔들리고(`gunShakeDuration`, `gunShakeMagnitude`), 발사 사운드(`HanoiSoundType.Shot` / `gunShotClip`, `Assets/Sounds/빵야.mp3`)가 재생되며, 대상 열쇠 창의 `BreakRightBorder()`를 호출한다.
-- **열쇠 창 오른쪽 테두리 파괴 및 다중 선분 안쪽 무너짐 연출 (`Window.cs` · `ImageWindow.cs`):**
-  - `Window.SetRightBorderBroken(true)` 호출 시 `UpdateBorderLayout(Vector2 value)`에서 별도 덮개 없이 `borderRenderer`의 가로 추가 두께를 `borderThickness * 2f`에서 `borderThickness`로 줄이고(`size.x = value.x + borderThickness`), `localPosition.x`를 `-borderThickness / 2f`로 이동시킨다. 이로써 왼쪽·위·아래 테두리는 그대로 유지되고 오른쪽 테두리만 창 본문 우측 끝(`+value.x / 2f`)과 일치하여 사라진다.
-  - **다중 선분 안쪽 무너짐 연출:** 오른쪽 테두리 전체 높이를 여러 개(기본 7개)의 선분 조각(`DebrisPiece`)으로 슬라이스하여, 총알의 운동량에 맞춰 **창 안쪽(왼쪽, `-X`, `-4.6 ~ -2.4`)**으로 속도감 있게 튀어 날아가며 회전(`±550°/s`)하고 강한 중력(`gravity = -22f`)을 받아 아래로 쏟아져 내리며 페이드아웃된다.
-  - `ImageWindow`는 `WindowBack`(`Secondary`)에도 테두리(`secondaryBorder`), 흰색 배경(`SecondaryRenderer`), 열쇠 이미지(`secondaryImage`), 다중 선분 파편(`debrisPieces[i].back`)을 미러링하여 `WINDOW.exe`로 덮었을 때 창이 뚫리지 않도록 보장한다.
-  - `BreakRightBorder()` 실행 시 피격 흔들림(`IsShakeActive`)을 재생하고 파괴 상태(`IsBorderBroken = true`)로 전환된다.
-- **키 창 깨진 텍스처 오버레이 및 효과음 분리 (`ImageWindow.cs`):**
-  - **깨진 텍스처 오버레이:** `brokenOverlaySprite` 필드를 지원하여 인스펙터에서 수동 할당하거나 `SetBrokenOverlaySprite`로 교체할 수 있다. 미할당 시에도 절차적 크랙 텍스처를 폴백으로 제공하여 즉시 시각 확인이 가능하며, `WindowFront`와 `WindowBack` 듀얼 레이어 모두에 오버레이(`order + 3`)되어 투시 중에도 선명하게 표시된다.
-  - **발사음과 깨지는 소리 분리:** 총 발사 시에는 `InternetWindow`에서 발사음(`빵야`)을 재생하고, 열쇠 창이 피격되어 깨질 때에는 `ImageWindow`의 `breakSoundClip`(또는 유리 깨지는 고주파 노이즈 폴백 클립)을 통해 깨지는 소리가 별도로 재생된다.
-- **열쇠 이미지 드래그 추출 및 쓰레기통 드롭 이벤트 (`ImageWindow.cs`):**
-  - `IsBorderBroken == true` 상태에서 열쇠 이미지를 마우스로 누르고 드래그하면 창 밖으로 열쇠 이미지를 꺼내 이동할 수 있다(`IsDraggingKey`, `DraggedKeyProxy`가 `WindowFront` 및 `WindowBack` 최상단 `sortingOrder = 30000`에 표시).
-  - 드래그한 열쇠를 바탕화면의 쓰레기통 아이콘(`DesktopIconView.ItemId == "recycle-bin"` 또는 `Icon_recycle-bin`)이나 쓰레기통 창(`"recycle-bin"`) 위에 드롭하면 열쇠가 소비(`IsKeyExtracted = true`)되며 `Debug.Log("[KeyToTrash] 열쇠 이미지를 쓰레기통에 드롭했습니다! (이벤트 발생)")` 출력과 함께 확장 가능한 이벤트(`onKeyDroppedToRecycleBin`, `OnKeyDroppedToRecycleBin`, `ImageWindow.OnAnyKeyDroppedToRecycleBin`)가 호출된다. 쓰레기통이 아닌 곳에 놓으면 원래 창 안의 위치로 복귀한다.
+  - **사격 허용 조건 (`requireMuzzleInWindowExeToShoot`, 기본 `true`):** 총구 좌표(`GetGunMuzzleWorldPosition()`)가 `WINDOW.exe`(`WindowExeWindow`, ID `"window"`)의 `OuterBounds` 내부에 덮여 있어야만 발사가 격발된다. 총구가 `WINDOW.exe` 바깥에 있을 때 총을 클릭하면 사격이 불발되어 사운드, 반동 흔들림, 총알 궤적이 일절 발생하지 않는다 (옵션을 `false`로 끄면 외부에서도 격발 및 도탄/허공 사격 가능).
+  - 총구 사격 허용 시 항상 반동 흔들림(`IsGunShaking`)과 발사음(`HanoiSoundType.Shot` / `gunShotClip`, `Assets/Sounds/빵야.mp3`)을 재생한다.
+  - 총알 궤적(`BulletTracer`)은 `WindowFront`와 `WindowBack` 듀얼 레이어 최상단(`order = 32000`)에 Sliced 단색 라인으로 생성되어 `WINDOW.exe` 뷰포트 내부와 외부 경계를 불문하고 모든 화면에서 선명하게 보이며, 페이드아웃(`bulletTrailDuration`, 기본 0.20s) 후 자동 소멸한다.
+  - **관통 발사 조건 충족 시 (`CanShootKeyWindow` == true):**
+    1. 총구 좌표(`GetGunMuzzleWorldPosition()`)가 `WINDOW.exe`(`WindowExeWindow`, ID `"window"`)의 `OuterBounds` 내부에 덮여 있어야 함.
+    2. 열쇠 창(`ImageWindow`, 기본 ID `"key-image"`) 역시 `WINDOW.exe`의 `OuterBounds`와 겹쳐 덮여 있어야 함.
+    3. 열쇠 창의 바운드가 총구 좌표의 **왼쪽**(`keyBounds.xMin < muzzlePos.x && keyBounds.center.x < muzzlePos.x`)에 위치해야 함.
+    - 위 조건 충족 시 총구에서 열쇠 창의 우측 테두리와 좌측 테두리를 관통하여 왼쪽 바깥으로 뻗어나가는 **직선 관통 궤적**이 생성되고, 대상 열쇠 창의 `BreakBothBorders()`가 호출된다.
+  - **발사 조건 미충족 / 윈도우 밖 사격 시 (도탄 연출):**
+    - 총구는 덮였으나 열쇠 창이 덮여 있지 않은 경우 열쇠 창은 깨지지 않는다.
+    - 총알 궤적이 열쇠 창 우측 테두리 표면(`rightEdgeX`)까지 날아간 뒤, 표면에 맞고 대각선 위쪽(`hitPoint + (3.0, 2.0)`)으로 튕겨져 나가는 **도탄 궤적**이 생성되며 도탄 효과음(`HanoiSoundType.Ricochet` / `gunRicochetClip`, 레트로 메탈릭 튕김 톤 / `Assets/Sounds/삑.mp3`)이 재생된다.
+- **열쇠 창 양쪽 테두리 관통 파괴 및 다중 선분 안쪽 무너짐 연출 (`Window.cs` · `ImageWindow.cs`):**
+  - `Window.SetBothBordersBroken(true)` 호출 시 `UpdateBorderLayout(Vector2 value)`에서 가로 테두리 두께를 양쪽 모두 제거하여 `size.x = value.x`로 설정하고 중심을 원점(`localPosition = (0, BarHeight / 2f, 0)`)에 배치한다. 이로써 좌우 양쪽 테두리가 모두 본문 뒤로 숨겨져 제거되고 상단(타이틀바 포함)과 하단 테두리만 남는 관통 터널 형태가 된다.
+  - **다중 선분 관통 무너짐 연출:** 우측 테두리와 좌측 테두리가 각각 여러 개(기본 7개씩, 총 14개)의 선분 조각(`DebrisPiece`)으로 나뉘어, 총알의 관통 방향에 맞춰 모두 **창 안쪽/왼쪽(`-X`, `-4.6 ~ -2.4`)**으로 속도감 있게 튀어 날아가며 회전(`±550°/s`)하고 강한 중력(`gravity = -22f`)을 받아 쏟아져 내리며 페이드아웃된다.
+  - `ImageWindow`는 `WindowBack`(`Secondary`)에도 테두리, 배경, 열쇠 이미지, 파편들을 미러링하여 `WINDOW.exe`로 덮었을 때 창이 뚫리지 않도록 보장한다. 피격 시 창 본체 피격 흔들림(`IsShakeActive`) 및 파괴 상태(`IsBothBordersBroken = true`, `IsBorderBroken = true`)로 전환된다.
+- **키 창 오버레이 기본 비우기 및 효과음 분리 (`ImageWindow.cs`):**
+  - **오버레이 비우기:** 열쇠 이미지를 왜곡 없이 투명하고 선명하게 조작할 수 있도록 기본 절차적 크랙 생성을 배제했다. `brokenOverlaySprite`가 할당되었을 때에만 오버레이가 활성화되며, 미할당 시에는 오버레이가 렌더링되지 않는다.
+  - **효과음 분리:** 발사 시에는 발사음(`InternetWindow`), 도탄 시에는 도탄음(`InternetWindow`), 열쇠 창 피격 파괴 시에는 `ImageWindow`의 `breakSoundClip`(유리 파편 깨지는 레트로 톤 / `빠직(깨지는 소리).mp3`)이 각각 독립적으로 재생된다.
+- **열쇠 독립 엔티티화 및 수명 주기 분리 (`ExtractedKeyEntity.cs` · `ImageWindow.cs`):**
+  - **열쇠 조작 조건:** 열쇠 창이 깨져 있어야 하며(`IsBorderBroken`), 열쇠 창의 테두리가 아니라 **실제 열쇠 오브젝트(아이콘 중심점 또는 클릭 위치)**가 `WINDOW.exe`의 `OuterBounds` 내부에 포함(`IsKeyObjectInsideWindowExe`)되어 있으면 열쇠 창의 안/밖 상태와 상관없이 드래그 조작이 가능하다.
+  - **수명 주기 분리:**
+    - 창 밖으로 꺼내기 전: 열쇠는 창의 소유이며, 열쇠 창을 닫으면 열쇠도 창과 함께 소멸한다.
+    - 창 밖으로 꺼낸 후: 열쇠는 독립 월드 오브젝트(`ExtractedKeyEntity`)로 승격되어, **열쇠 창을 닫아도 바탕화면(월드)에 그대로 남는다**. 이후 수명은 **휴지통에 넣어질 때까지** 유지된다.
+  - **기획 사전 설정 토글 옵션 (Inspector):**
+    - `requireWindowExeToExtractFromWindow` (기본 `true`): 창 안에서 열쇠를 꺼낼 때 열쇠 오브젝트가 `WINDOW.exe` 안에 포함되어야 드래그 가능.
+    - `requireWindowExeToDragWhenOutside` (기본 `false`): 창 밖으로 꺼낸 후에도 계속 `WINDOW.exe`로 비춰야만 조작 가능한지 여부 (기본값은 자유 조작).
+    - `preventDraggingKeyOutsideWindowExe` (기본 `false`): `WINDOW.exe` 안에서 열쇠를 드래그할 때 `WINDOW.exe` 경계 바깥으로 빠져나가지 못하도록 클램핑(차단)할지 여부.
+    - `persistExtractionOnReopen` (기본 `true`): 열쇠를 꺼낸 뒤 열쇠 창을 닫았다가 다시 열었을 때, 열쇠는 밖을 유지하고 창은 양옆이 뚫린 빈 창으로 열릴지 여부.
+  - **열쇠 사용 및 복원 윈도우 연동 (휴지통 연결 제거):**
+    - 기존 열쇠-휴지통 연결점을 완전히 삭제했다. 열쇠를 바탕화면 휴지통 아이콘이나 폴더 창에 드롭해도 아무 반응이 일어나지 않는다.
+    - 열쇠 창이 깨져 밖으로 꺼낸 열쇠(또는 드래그 프록시)를 새로 추가된 **복원 윈도우(`RepairWindow`)** 위에 드롭하면 `repairWindow.TryUseKey()`가 호출되어 초기 이미지에서 두 번째 복원 이미지로 교체된다.
+    - **`consumeKeyOnUse` (기본값: `true`):**
+      - `true`: 복원 창에 열쇠를 사용한 직후 열쇠가 소모(파괴)되어 사라진다.
+      - `false`: 복원 창에 열쇠를 사용한 후에도 열쇠가 소멸하지 않고, 마우스가 놓인 위치에 독립 월드 엔티티로 그대로 유지되어 추가 조작이 가능하다.
+
+- **휴지통 폴더 윈도우 및 복원 윈도우 (`FolderWindow.cs` · `RepairWindow.cs`):**
+  - **`FolderWindow` (휴지통 폴더 창):**
+    - 바탕화면 휴지통 아이콘(`recycle-bin`)을 열었을 때 뜨는 폴더 창이다.
+    - 내부 콘텐츠 영역에 단일 실행 앱 아이콘(`executableItemName`: 기본 `"복원.exe"`, `targetExecutableWindowId`: 기본 `"repair"`)이 배치된다.
+    - 별도 선택 상태 없이, 해당 앱 아이콘을 **더블클릭**하면 `WindowManager.Instance.Open("repair")`가 호출되어 복원 윈도우가 열린다.
+  - **`RepairWindow` (복원 윈도우):**
+    - 단일 이미지를 화면에 띄워주며, 향후 상호작용에 따라 이미지를 확장 교체(`SetSprite(Sprite)`)할 수 있는 창이다.
+    - `WindowFront`와 `WindowBack` 듀얼 레이어 구조로 구성되어 `WINDOW.exe` 투시 연출 시에도 자연스럽게 렌더링된다.
+    - **이미지 교체:** 초기 상태(`initialSprite`, Stage 0)에서 열쇠를 드롭하면 두 번째 이미지(`secondSprite`, Stage 1)로 전환되고 효과음 및 `OnKeyUsed` 이벤트가 호출된다. 이미지가 수동 할당되지 않았을 때에도 기본 내장 플레이스홀더 스프라이트를 생성하여 안전하게 렌더링된다.
 
 ## 21. 2026-10-31 원격 main 병합 연결
 

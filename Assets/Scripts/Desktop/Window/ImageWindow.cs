@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace WindowExe.Desktop.Desktop.Window
 {
+    [ExecuteAlways]
     public class ImageWindow : Window
     {
         [SerializeField] private Sprite primarySprite;
@@ -20,10 +21,24 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private Vector2 debrisAngularVelocityRange = new Vector2(-550f, 550f);
 
         [Header("Broken Window Overlay")]
+        [Tooltip("깨진 유리 오버레이 스프라이트 (미할당 시 오버레이 비활성화)")]
         [SerializeField] private Sprite brokenOverlaySprite;
         [SerializeField] private Color brokenOverlayColor = new Color(1f, 1f, 1f, 0.88f);
         [SerializeField] private Vector2 brokenOverlayScale = Vector2.one;
         [SerializeField] private Vector2 brokenOverlayOffset = Vector2.zero;
+
+        [Header("Extraction Policy Options")]
+        [Tooltip("열쇠 창 내부에서 열쇠를 처음 꺼낼 때 WINDOW.exe 안에 비춰져야만 드래그 가능한지 여부 (기본: true)")]
+        [SerializeField] private bool requireWindowExeToExtractFromWindow = true;
+
+        [Tooltip("WINDOW.exe 안에서 열쇠를 드래그할 때, WINDOW.exe 밖으로 끌어내는 것을 막을지 여부 (true: WINDOW.exe 경계 안으로 제한, false: 자유롭게 밖으로 추출 가능)")]
+        [SerializeField] private bool preventDraggingKeyOutsideWindowExe = false;
+
+        [Tooltip("열쇠를 창 밖으로 완전히 꺼낸 후에도 WINDOW.exe로 비춰야만 드래그할 수 있는지 여부 (true: 비춰야 함, false: 창 밖에서는 자유 조작)")]
+        [SerializeField] private bool requireWindowExeToDragWhenOutside = false;
+
+        [Tooltip("열쇠를 창 밖으로 꺼낸 상태에서 열쇠 창을 닫았다가 다시 열었을 때, 열쇠가 창 밖(꺼내진 상태)을 유지할지 여부 (true: 빈 창으로 열리고 열쇠는 밖 유지, false: 창 안으로 복귀)")]
+        [SerializeField] private bool persistExtractionOnReopen = true;
 
         [Header("Audio")]
         [SerializeField] private AudioClip breakSoundClip;
@@ -31,11 +46,54 @@ namespace WindowExe.Desktop.Desktop.Window
 
         [Header("Events")]
         public UnityEvent onBorderBroken;
+        public UnityEvent onKeyUsedOnRepairWindow;
+        [System.Obsolete("Use onKeyUsedOnRepairWindow instead")]
         public UnityEvent onKeyDroppedToRecycleBin;
 
         public event Action OnBorderBroken;
+        public event Action OnKeyUsedOnRepairWindow;
+        public static event Action<ImageWindow> OnAnyKeyUsedOnRepairWindow;
+        [System.Obsolete("Use OnKeyUsedOnRepairWindow instead")]
         public event Action OnKeyDroppedToRecycleBin;
+        [System.Obsolete("Use OnAnyKeyUsedOnRepairWindow instead")]
         public static event Action<ImageWindow> OnAnyKeyDroppedToRecycleBin;
+
+        // 세션 내 전역 열쇠 추출 상태 관리
+        private static bool isKeyGloballyExtracted;
+        private static ExtractedKeyEntity activeWorldKeyEntity;
+
+        public static bool IsKeyGloballyExtracted => isKeyGloballyExtracted;
+        public static ExtractedKeyEntity ActiveWorldKeyEntity => activeWorldKeyEntity;
+        public static Rect? OverrideWindowExeBounds { get; set; }
+
+        public static void ResetGlobalExtractionState()
+        {
+            isKeyGloballyExtracted = false;
+            OverrideWindowExeBounds = null;
+            if (activeWorldKeyEntity != null)
+            {
+                SafeDestroy(activeWorldKeyEntity.gameObject);
+                activeWorldKeyEntity = null;
+            }
+        }
+
+        private static void SafeDestroy(GameObject go)
+        {
+            if (go == null) return;
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
+
+        public static void NotifyKeyUsedOnRepairWindow(ExtractedKeyEntity entity)
+        {
+            OnAnyKeyUsedOnRepairWindow?.Invoke(null);
+        }
+
+        [System.Obsolete("Use NotifyKeyUsedOnRepairWindow instead")]
+        public static void NotifyKeyDroppedToRecycleBin(ExtractedKeyEntity entity)
+        {
+            NotifyKeyUsedOnRepairWindow(entity);
+        }
 
         private Transform primaryRoot;
         private SpriteRenderer image;
@@ -45,7 +103,6 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private SpriteRenderer brokenOverlayFront;
         private SpriteRenderer brokenOverlayBack;
-        private static Sprite defaultBrokenOverlaySprite;
 
         private class DebrisPiece
         {
@@ -85,7 +142,12 @@ namespace WindowExe.Desktop.Desktop.Window
         public AudioClip LastPlayedBreakClip { get; private set; }
         public int BreakSoundPlayCount { get; private set; }
 
-        public bool IsBorderBroken => IsRightBorderBroken;
+        public bool RequireWindowExeToExtractFromWindow { get => requireWindowExeToExtractFromWindow; set => requireWindowExeToExtractFromWindow = value; }
+        public bool PreventDraggingKeyOutsideWindowExe { get => preventDraggingKeyOutsideWindowExe; set => preventDraggingKeyOutsideWindowExe = value; }
+        public bool RequireWindowExeToDragWhenOutside { get => requireWindowExeToDragWhenOutside; set => requireWindowExeToDragWhenOutside = value; }
+        public bool PersistExtractionOnReopen { get => persistExtractionOnReopen; set => persistExtractionOnReopen = value; }
+
+        public bool IsBorderBroken => IsBothBordersBroken || IsRightBorderBroken;
         public bool IsShakeActive => shakeTimer > 0f;
         public bool HasActiveDebris => debrisTimer > 0f && debrisPieces.Count > 0 && debrisPieces[0].front != null && debrisPieces[0].front.gameObject.activeSelf;
         public int DebrisPieceCount => debrisPieces.Count;
@@ -105,6 +167,49 @@ namespace WindowExe.Desktop.Desktop.Window
         public bool IsKeyConsumed { get; private set; }
         public Vector2 DraggedKeyWorldPosition => dragProxyRoot != null ? (Vector2)dragProxyRoot.position : (Vector2)transform.position;
         public Rect? OverrideRecycleBinWorldRect { get; set; }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            if (persistExtractionOnReopen && isKeyGloballyExtracted)
+            {
+                // 이전에 이미 열쇠를 창 밖으로 꺼냈던 경우: 창은 양쪽 테두리가 깨진 빈 창으로 시작
+                SetBothBordersBroken(true);
+                IsKeyOutsideWindow = true;
+                if (image != null) image.enabled = false;
+                if (secondaryImage != null) secondaryImage.enabled = false;
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            // 열쇠가 이미 창 밖으로 나간 상태에서 열쇠 창이 닫히면, 열쇠를 월드 독립 엔티티로 승격하여 유지
+            if (IsKeyOutsideWindow && !IsKeyConsumed && activeWorldKeyEntity == null)
+            {
+                DetachKeyToWorld();
+            }
+            base.OnDestroy();
+        }
+
+        public ExtractedKeyEntity DetachKeyToWorld()
+        {
+            if (activeWorldKeyEntity != null) return activeWorldKeyEntity;
+            if (primarySprite == null || IsKeyConsumed) return null;
+
+            var go = new GameObject("ExtractedKeyEntity");
+            var entity = go.AddComponent<ExtractedKeyEntity>();
+            Vector3 pos = dragProxyRoot != null ? dragProxyRoot.position : transform.position;
+            go.transform.position = pos;
+            Vector3 scale = dragProxyFront != null ? dragProxyFront.transform.localScale : (image != null ? image.transform.localScale : Vector3.one);
+            entity.Initialize(primarySprite, scale, requireWindowExeToDragWhenOutside, OverrideRecycleBinWorldRect, preventDraggingKeyOutsideWindowExe);
+            activeWorldKeyEntity = entity;
+            isKeyGloballyExtracted = true;
+
+            if (dragProxyRoot != null)
+                dragProxyRoot.gameObject.SetActive(false);
+
+            return entity;
+        }
 
         protected override void InitializePrimary()
         {
@@ -351,25 +456,66 @@ namespace WindowExe.Desktop.Desktop.Window
 
         public bool BreakRightBorder()
         {
+            return BreakBothBorders();
+        }
+
+        public bool BreakBothBorders()
+        {
             if (IsBorderBroken) return false;
 
-            // 1. 테두리 가로 두께를 줄이고 왼쪽으로 이동하여 우측 테두리 제거 (전환)
-            SetRightBorderBroken(true);
+            // 1. 테두리 좌우 두께를 모두 제거하여 양쪽 테두리 제거 (상하 테두리만 남김)
+            SetBothBordersBroken(true);
 
-            // 2. 우측 테두리 다중 선분 파편 탈락 연출 시작 (창 안쪽으로 쏟아져 내림)
+            // 2. 우측 테두리와 좌측 테두리 다중 선분 파편 탈락 연출 (모두 왼쪽 방향으로 쏟아져 내림)
             debrisTimer = debrisFallDuration;
-            EnsureDebrisPieces(debrisPieceCount);
+            int halfCount = Mathf.Max(1, debrisPieceCount);
+            EnsureDebrisPieces(halfCount * 2);
 
             float totalH = size.y + BarHeight + BorderThickness * 2f;
-            float startX = size.x * 0.5f + BorderThickness * 0.5f;
-            float pieceH = totalH / debrisPieces.Count;
+            float rightStartX = size.x * 0.5f + BorderThickness * 0.5f;
+            float leftStartX = -size.x * 0.5f - BorderThickness * 0.5f;
+            float pieceH = totalH / halfCount;
 
-            for (int i = 0; i < debrisPieces.Count; i++)
+            // 우측 벽 파편들 (0 ~ halfCount - 1)
+            for (int i = 0; i < halfCount; i++)
             {
                 var piece = debrisPieces[i];
                 float pieceY = -totalH * 0.5f + (i + 0.5f) * pieceH + BarHeight * 0.5f;
-                piece.localPos = new Vector2(startX, pieceY);
+                piece.localPos = new Vector2(rightStartX, pieceY);
 
+                float vx = UnityEngine.Random.Range(debrisInwardVelocityRange.x, debrisInwardVelocityRange.y);
+                float vy = UnityEngine.Random.Range(debrisVerticalVelocityRange.x, debrisVerticalVelocityRange.y);
+                piece.velocity = new Vector2(vx, vy);
+                piece.angle = 0f;
+                piece.angularVelocity = UnityEngine.Random.Range(debrisAngularVelocityRange.x, debrisAngularVelocityRange.y);
+                piece.size = new Vector2(BorderThickness, pieceH);
+
+                if (piece.front != null)
+                {
+                    piece.front.color = BorderColor;
+                    piece.front.size = piece.size;
+                    piece.front.transform.localPosition = piece.localPos;
+                    piece.front.transform.localRotation = Quaternion.identity;
+                    piece.front.gameObject.SetActive(true);
+                }
+                if (piece.back != null)
+                {
+                    piece.back.color = BorderColor;
+                    piece.back.size = piece.size;
+                    piece.back.transform.localPosition = piece.localPos;
+                    piece.back.transform.localRotation = Quaternion.identity;
+                    piece.back.gameObject.SetActive(true);
+                }
+            }
+
+            // 좌측 벽 파편들 (halfCount ~ halfCount * 2 - 1)
+            for (int i = 0; i < halfCount; i++)
+            {
+                var piece = debrisPieces[halfCount + i];
+                float pieceY = -totalH * 0.5f + (i + 0.5f) * pieceH + BarHeight * 0.5f;
+                piece.localPos = new Vector2(leftStartX, pieceY);
+
+                // 좌측 벽도 총알의 관통 방향에 따라 왼쪽으로 튕겨져 나감
                 float vx = UnityEngine.Random.Range(debrisInwardVelocityRange.x, debrisInwardVelocityRange.y);
                 float vy = UnityEngine.Random.Range(debrisVerticalVelocityRange.x, debrisVerticalVelocityRange.y);
                 piece.velocity = new Vector2(vx, vy);
@@ -398,8 +544,11 @@ namespace WindowExe.Desktop.Desktop.Window
             // 3. 피격 창 흔들림 연출 시작
             shakeTimer = breakShakeDuration;
 
-            // 4. 깨진 유리 오버레이 텍스처 덧씌우기
-            ActivateBrokenOverlay();
+            // 4. 깨진 유리 오버레이 텍스처 (스프라이트가 있을 때만 덧씌움)
+            if (brokenOverlaySprite != null)
+            {
+                ActivateBrokenOverlay();
+            }
 
             // 5. 깨지는 효과음 재생
             PlayBreakSound();
@@ -466,27 +615,43 @@ namespace WindowExe.Desktop.Desktop.Window
         public void SetBrokenOverlaySprite(Sprite sprite)
         {
             brokenOverlaySprite = sprite;
-            if (IsBrokenOverlayActive)
+            if (sprite == null)
             {
-                Sprite targetSprite = sprite != null ? sprite : GetOrCreateDefaultBrokenSprite();
-                if (brokenOverlayFront != null) brokenOverlayFront.sprite = targetSprite;
-                if (brokenOverlayBack != null) brokenOverlayBack.sprite = targetSprite;
-                UpdateBrokenOverlayLayout(size);
+                if (brokenOverlayFront != null) brokenOverlayFront.gameObject.SetActive(false);
+                if (brokenOverlayBack != null) brokenOverlayBack.gameObject.SetActive(false);
+            }
+            else
+            {
+                if (IsBorderBroken)
+                {
+                    ActivateBrokenOverlay();
+                }
+                else
+                {
+                    if (brokenOverlayFront != null) brokenOverlayFront.sprite = sprite;
+                    if (brokenOverlayBack != null) brokenOverlayBack.sprite = sprite;
+                    UpdateBrokenOverlayLayout(size);
+                }
             }
         }
 
         private void ActivateBrokenOverlay()
         {
-            Sprite targetSprite = brokenOverlaySprite != null ? brokenOverlaySprite : GetOrCreateDefaultBrokenSprite();
+            if (brokenOverlaySprite == null)
+            {
+                if (brokenOverlayFront != null) brokenOverlayFront.gameObject.SetActive(false);
+                if (brokenOverlayBack != null) brokenOverlayBack.gameObject.SetActive(false);
+                return;
+            }
 
             if (brokenOverlayFront != null)
             {
-                brokenOverlayFront.sprite = targetSprite;
+                brokenOverlayFront.sprite = brokenOverlaySprite;
                 brokenOverlayFront.gameObject.SetActive(true);
             }
             if (brokenOverlayBack != null)
             {
-                brokenOverlayBack.sprite = targetSprite;
+                brokenOverlayBack.sprite = brokenOverlaySprite;
                 brokenOverlayBack.gameObject.SetActive(true);
             }
 
@@ -512,54 +677,6 @@ namespace WindowExe.Desktop.Desktop.Window
                 brokenOverlayBack.color = brokenOverlayColor;
                 brokenOverlayBack.size = overlaySize;
                 brokenOverlayBack.transform.localPosition = overlayPos;
-            }
-        }
-
-        private static Sprite GetOrCreateDefaultBrokenSprite()
-        {
-            if (defaultBrokenOverlaySprite != null) return defaultBrokenOverlaySprite;
-
-            const int width = 64;
-            const int height = 64;
-            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Point;
-
-            Color transparent = new Color(1f, 1f, 1f, 0f);
-            Color crackColor = new Color(1f, 1f, 1f, 0.95f);
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    tex.SetPixel(x, y, transparent);
-                }
-            }
-
-            // 거친 유리 크랙 선들 그리기
-            DrawBresenhamLine(tex, 0, height / 2, width - 1, height - 1, crackColor);
-            DrawBresenhamLine(tex, 0, height / 2, width - 1, 0, crackColor);
-            DrawBresenhamLine(tex, width / 2, 0, width / 2, height - 1, crackColor);
-            DrawBresenhamLine(tex, 10, height - 1, width - 1, height / 3, crackColor);
-            DrawBresenhamLine(tex, 15, 0, width - 1, height * 2 / 3, crackColor);
-
-            tex.Apply();
-            defaultBrokenOverlaySprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-            return defaultBrokenOverlaySprite;
-        }
-
-        private static void DrawBresenhamLine(Texture2D tex, int x0, int y0, int x1, int y1, Color col)
-        {
-            int dx = Mathf.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-            int dy = -Mathf.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-            int err = dx + dy;
-            while (true)
-            {
-                if (x0 >= 0 && x0 < tex.width && y0 >= 0 && y0 < tex.height)
-                    tex.SetPixel(x0, y0, col);
-                if (x0 == x1 && y0 == y1) break;
-                int e2 = 2 * err;
-                if (e2 >= dy) { err += dy; x0 += sx; }
-                if (e2 <= dx) { err += dx; y0 += sy; }
             }
         }
 
@@ -663,6 +780,74 @@ namespace WindowExe.Desktop.Desktop.Window
             return base.ResizeAt(point);
         }
 
+        public static bool TryGetWindowExeBounds(out Rect exeBounds, WindowManager wm = null)
+        {
+            if (OverrideWindowExeBounds.HasValue)
+            {
+                exeBounds = OverrideWindowExeBounds.Value;
+                return true;
+            }
+
+            if (wm == null) wm = WindowManager.Instance;
+            if (wm != null)
+            {
+                foreach (var proc in wm.ActiveProcesses)
+                {
+                    if (proc == null || proc.State == WindowState.Minimized || proc.Instance == null || !proc.Instance.gameObject.activeInHierarchy)
+                        continue;
+
+                    if (proc.Instance is WindowExeWindow ||
+                        string.Equals(proc.Id, "window", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(proc.Id, "WINDOW.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        exeBounds = proc.Instance.OuterBounds;
+                        return true;
+                    }
+                }
+            }
+
+            var exeWindows = UnityEngine.Object.FindObjectsByType<WindowExeWindow>(FindObjectsSortMode.None);
+            foreach (var exe in exeWindows)
+            {
+                if (exe == null || !exe.gameObject.activeInHierarchy) continue;
+                exeBounds = exe.OuterBounds;
+                return true;
+            }
+
+            exeBounds = default;
+            return false;
+        }
+
+        public static bool IsPointInsideWindowExe(Vector2 point, WindowManager wm = null)
+        {
+            if (TryGetWindowExeBounds(out Rect exeBounds, wm))
+            {
+                return exeBounds.Contains(point);
+            }
+            return false;
+        }
+
+        public static bool IsKeyObjectInsideWindowExe(Vector2 keyCenter, Vector2 clickPoint, WindowManager wm = null)
+        {
+            if (TryGetWindowExeBounds(out Rect exeBounds, wm))
+            {
+                // 열쇠 창의 테두리/타이틀바가 아니라, 실제 열쇠(중심점 또는 클릭 지점)가 WINDOW.exe 안에 있으면 조작 가능
+                return exeBounds.Contains(keyCenter) || exeBounds.Contains(clickPoint);
+            }
+            return false;
+        }
+
+        public static bool IsRectFullyInsideWindowExe(Rect targetRect, WindowManager wm = null)
+        {
+            if (TryGetWindowExeBounds(out Rect exeBounds, wm))
+            {
+                return exeBounds.xMin <= targetRect.xMin && exeBounds.xMax >= targetRect.xMax &&
+                       exeBounds.yMin <= targetRect.yMin && exeBounds.yMax >= targetRect.yMax;
+            }
+
+            return false;
+        }
+
         public bool BeginKeyDrag(Vector2 worldPoint)
         {
             if (!IsBorderBroken || IsKeyConsumed || primarySprite == null)
@@ -676,6 +861,12 @@ namespace WindowExe.Desktop.Desktop.Window
                               worldPoint.y <= transform.position.y + size.y * 0.5f;
 
             if (!keyRect.Contains(worldPoint) && !insideBody)
+                return false;
+
+            // 열쇠 창 전체가 아닌, 열쇠 오브젝트 자체가 WINDOW.exe 안에 있는지만 검사
+            Vector2 keyCenter = !IsKeyOutsideWindow ? (Vector2)transform.position : DraggedKeyWorldPosition;
+            bool needsWindowExe = !IsKeyOutsideWindow ? requireWindowExeToExtractFromWindow : requireWindowExeToDragWhenOutside;
+            if (needsWindowExe && !IsKeyObjectInsideWindowExe(keyCenter, worldPoint, Manager))
                 return false;
 
             EnsureDragProxy();
@@ -694,14 +885,23 @@ namespace WindowExe.Desktop.Desktop.Window
         {
             if (!IsDraggingImage) return;
 
-            if (dragProxyRoot != null)
+            Vector2 dragPoint = worldPoint;
+            if (preventDraggingKeyOutsideWindowExe && TryGetWindowExeBounds(out Rect exeBounds, Manager))
             {
-                dragProxyRoot.position = new Vector3(worldPoint.x, worldPoint.y, transform.position.z);
+                float margin = 0.25f;
+                dragPoint.x = Mathf.Clamp(dragPoint.x, exeBounds.xMin + margin, exeBounds.xMax - margin);
+                dragPoint.y = Mathf.Clamp(dragPoint.y, exeBounds.yMin + margin, exeBounds.yMax - margin);
             }
 
-            if (!OuterBounds.Contains(worldPoint))
+            if (dragProxyRoot != null)
+            {
+                dragProxyRoot.position = new Vector3(dragPoint.x, dragPoint.y, transform.position.z);
+            }
+
+            if (!OuterBounds.Contains(dragPoint))
             {
                 IsKeyOutsideWindow = true;
+                isKeyGloballyExtracted = true;
             }
         }
 
@@ -709,38 +909,73 @@ namespace WindowExe.Desktop.Desktop.Window
         {
             if (!IsDraggingImage) return false;
 
-            UpdateKeyDrag(worldPoint);
+            Vector2 dragPoint = worldPoint;
+            if (preventDraggingKeyOutsideWindowExe && TryGetWindowExeBounds(out Rect exeBounds, Manager))
+            {
+                float margin = 0.25f;
+                dragPoint.x = Mathf.Clamp(dragPoint.x, exeBounds.xMin + margin, exeBounds.xMax - margin);
+                dragPoint.y = Mathf.Clamp(dragPoint.y, exeBounds.yMin + margin, exeBounds.yMax - margin);
+            }
+
+            UpdateKeyDrag(dragPoint);
             IsDraggingImage = false;
 
-            if (IsPointOverRecycleBin(worldPoint, screenPoint))
+            RepairWindow repairWindow = RepairWindow.FindRepairWindowAt(dragPoint, Manager);
+            if (repairWindow != null && repairWindow.TryUseKey())
             {
-                IsKeyConsumed = true;
-                IsKeyOutsideWindow = true;
+                if (repairWindow.ConsumeKeyOnUse)
+                {
+                    IsKeyConsumed = true;
+                    IsKeyOutsideWindow = true;
+                    isKeyGloballyExtracted = false;
 
-                if (dragProxyRoot != null)
-                    dragProxyRoot.gameObject.SetActive(false);
+                    if (dragProxyRoot != null)
+                        dragProxyRoot.gameObject.SetActive(false);
 
-                if (image != null) image.enabled = false;
-                if (secondaryImage != null) secondaryImage.enabled = false;
+                    if (image != null) image.enabled = false;
+                    if (secondaryImage != null) secondaryImage.enabled = false;
+                    if (activeWorldKeyEntity != null)
+                    {
+                        SafeDestroy(activeWorldKeyEntity.gameObject);
+                        activeWorldKeyEntity = null;
+                    }
+                }
+                else
+                {
+                    // 열쇠 미소모: 놓인 위치에 그대로 유지
+                    IsKeyOutsideWindow = true;
+                    isKeyGloballyExtracted = true;
+                    DetachKeyToWorld();
+                    if (activeWorldKeyEntity != null)
+                    {
+                        activeWorldKeyEntity.transform.position = new Vector3(dragPoint.x, dragPoint.y, transform.position.z);
+                    }
+                }
 
-                Debug.Log("[KeyToTrash] 열쇠 이미지를 쓰레기통에 드롭했습니다! (이벤트 발생)", this);
-                onKeyDroppedToRecycleBin?.Invoke();
-                OnKeyDroppedToRecycleBin?.Invoke();
-                OnAnyKeyDroppedToRecycleBin?.Invoke(this);
+                Debug.Log("[KeyToRepair] 열쇠 이미지를 복원 창에 사용했습니다! (이벤트 발생)", this);
+                onKeyUsedOnRepairWindow?.Invoke();
+                OnKeyUsedOnRepairWindow?.Invoke();
+                OnAnyKeyUsedOnRepairWindow?.Invoke(this);
                 return true;
             }
 
-            if (!OuterBounds.Contains(worldPoint))
+            if (!OuterBounds.Contains(dragPoint))
             {
-                // 창 밖으로 빼낸 상태 유지 (다시 드래그해서 쓰레기통으로 옮길 수 있음)
+                // 창 밖으로 빼낸 상태 유지 (독립 월드 엔티티로 전환되어 창이 닫혀도 유지됨)
                 IsKeyOutsideWindow = true;
-                if (dragProxyRoot != null)
-                    dragProxyRoot.gameObject.SetActive(true);
+                isKeyGloballyExtracted = true;
+                DetachKeyToWorld();
             }
             else
             {
                 // 창 내부에서 놓았으면 다시 창 안으로 복귀
                 IsKeyOutsideWindow = false;
+                isKeyGloballyExtracted = false;
+                if (activeWorldKeyEntity != null)
+                {
+                    SafeDestroy(activeWorldKeyEntity.gameObject);
+                    activeWorldKeyEntity = null;
+                }
                 if (dragProxyRoot != null)
                     dragProxyRoot.gameObject.SetActive(false);
                 if (image != null) image.enabled = primarySprite != null;

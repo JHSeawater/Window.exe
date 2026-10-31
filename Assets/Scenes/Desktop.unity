@@ -1095,6 +1095,8 @@ MonoBehaviour:
     prefab: {fileID: 1747678266989169681, guid: 270fea833f570492b9885326a6620c1d, type: 3}
   - id: key-image
     prefab: {fileID: 807555320379949309, guid: 019e84947dcf8c740abe844161eaa139, type: 3}
+  - id: repair
+    prefab: {fileID: 100003, guid: d5b1c2a3f4e560718293a4b5c6d7e901, type: 3}
   windowRoot: {fileID: 808775645}
 --- !u!4 &808775645
 Transform:

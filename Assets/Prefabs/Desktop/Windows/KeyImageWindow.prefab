@@ -72,6 +72,9 @@ MonoBehaviour:
   brokenOverlayColor: {r: 1, g: 1, b: 1, a: 0.88}
   brokenOverlayScale: {x: 1, y: 1}
   brokenOverlayOffset: {x: 0, y: 0}
+  requireWindowExeToExtractFromWindow: 1
+  requireWindowExeToDragWhenOutside: 1
+  persistExtractionOnReopen: 1
   breakSoundClip: {fileID: 8300000, guid: b1f2b6834a9b94b01b8e866a8f7f1ee0, type: 3}
   breakSoundVolume: 0.85
   onBorderBroken:

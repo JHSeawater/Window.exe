@@ -21,6 +21,7 @@ namespace WindowExe.Desktop.Tests
         [TearDown]
         public void TearDown()
         {
+            ImageWindow.ResetGlobalExtractionState();
             if (windowGo != null)
             {
                 Object.DestroyImmediate(windowGo);
@@ -107,10 +108,11 @@ namespace WindowExe.Desktop.Tests
             Assert.IsFalse(window.IsBorderBroken);
             Assert.IsTrue(window.BreakRightBorder());
             Assert.IsTrue(window.IsBorderBroken);
+            Assert.IsTrue(window.IsBothBordersBroken);
 
-            // 가로 두께가 2t -> 1t로 줄고 중심이 -t/2로 이동하여 우측 끝이 +size.x/2와 정확히 일치
-            Assert.AreEqual(testSize.x + t, window.BorderRenderer.size.x, 0.001f);
-            Assert.AreEqual(-t * 0.5f, window.BorderRenderer.transform.localPosition.x, 0.001f);
+            // 양쪽 테두리가 모두 제거되어 좌우 테두리가 본문 크기(testSize.x)와 정확히 일치
+            Assert.AreEqual(testSize.x, window.BorderRenderer.size.x, 0.001f);
+            Assert.AreEqual(0f, window.BorderRenderer.transform.localPosition.x, 0.001f);
             float rightEdge = window.BorderRenderer.transform.localPosition.x + window.BorderRenderer.size.x * 0.5f;
             Assert.AreEqual(testSize.x * 0.5f, rightEdge, 0.001f);
 
@@ -165,7 +167,7 @@ namespace WindowExe.Desktop.Tests
         }
 
         [Test]
-        public void BreakingRightBorderActivatesBrokenOverlayAndPlaysSeparateBreakSound()
+        public void BreakingRightBorderKeepsOverlayEmptyByDefaultAndOnlyShowsWhenSpriteAssigned()
         {
             window.ApplyGeometry(Vector2.zero, new Vector2(4f, 3f));
 
@@ -174,23 +176,20 @@ namespace WindowExe.Desktop.Tests
 
             Assert.IsTrue(window.BreakRightBorder());
 
-            // 1. 깨진 텍스처 오버레이 활성화 및 듀얼 레이어 동기화 확인
-            Assert.IsTrue(window.IsBrokenOverlayActive);
-            Assert.IsNotNull(window.BrokenOverlayFront);
-            Assert.IsTrue(window.BrokenOverlayFront.gameObject.activeSelf);
-            Assert.IsNotNull(window.BrokenOverlayBack);
-            Assert.IsTrue(window.BrokenOverlayBack.gameObject.activeSelf);
+            // 1. 기본적으로 오버레이 스프라이트가 없으므로 깨져도 오버레이는 비활성화 상태 유지
+            Assert.IsFalse(window.IsBrokenOverlayActive, "기본 크랙 오버레이는 비워져 있어야 합니다.");
 
             // 2. 깨지는 효과음이 별도로 재생되었는지 확인
             Assert.AreEqual(1, window.BreakSoundPlayCount);
             Assert.IsNotNull(window.LastPlayedBreakClip);
 
-            // 3. 커스텀 깨진 스프라이트 교체 지원 확인
+            // 3. 커스텀 깨진 스프라이트 할당 시 활성화 확인
             var customTex = new Texture2D(2, 2);
             var customSprite = Sprite.Create(customTex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
             try
             {
                 window.SetBrokenOverlaySprite(customSprite);
+                Assert.IsTrue(window.IsBrokenOverlayActive);
                 Assert.AreEqual(customSprite, window.BrokenOverlayFront.sprite);
                 Assert.AreEqual(customSprite, window.BrokenOverlayBack.sprite);
             }
@@ -202,15 +201,22 @@ namespace WindowExe.Desktop.Tests
         }
 
         [Test]
-        public void BrokenKeyWindowAllowsDraggingKeyImageOutAndDroppingIntoRecycleBinTriggersEvent()
+        public void BrokenKeyWindowAllowsDraggingKeyImageOutAndDroppingIntoRepairWindowReplacesImage()
         {
             var tex = new Texture2D(2, 2);
             var keySprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+            GameObject repairGo = new GameObject("RepairWindow");
+            var repairWindow = repairGo.AddComponent<RepairWindow>();
 
             try
             {
+                repairWindow.ConsumeKeyOnUse = true;
+                RepairWindow.OverrideActiveRepairWindow = repairWindow;
+                RepairWindow.OverrideRepairWindowWorldRect = new Rect(9f, -5f, 2f, 2f);
+
                 window.ApplyGeometry(Vector2.zero, new Vector2(4f, 3f));
                 window.SetPrimarySprite(keySprite);
+                window.RequireWindowExeToExtractFromWindow = false;
 
                 // 깨지기 전에는 드래그 불가
                 Assert.IsFalse(window.BeginKeyDrag(Vector2.zero));
@@ -227,18 +233,268 @@ namespace WindowExe.Desktop.Tests
                 Assert.AreEqual(outsidePos.x, window.DraggedKeyWorldPosition.x, 0.001f);
                 Assert.AreEqual(outsidePos.y, window.DraggedKeyWorldPosition.y, 0.001f);
 
-                // 쓰레기통 위치를 (10, -4) 주변으로 설정하고 그곳에 드롭 시 이벤트 발생 확인
-                window.OverrideRecycleBinWorldRect = new Rect(9f, -5f, 2f, 2f);
+                // 1. 기존 휴지통 영역(허공)에 드롭 시에는 소비되지 않음 (휴지통 연결점 삭제 검증)
+                window.OverrideRecycleBinWorldRect = new Rect(3f, -5f, 2f, 2f);
+                Assert.IsFalse(window.EndKeyDrag(new Vector2(4f, -4f)));
+                Assert.IsFalse(window.IsKeyConsumed);
+
+                // 2. 복원 창 위치 (10, -4)에 드롭 시 복원 이벤트 발생 및 2단계 이미지 교체 확인
+                Assert.IsTrue(window.BeginKeyDrag(new Vector2(4f, -4f)));
                 bool eventTriggered = false;
-                window.OnKeyDroppedToRecycleBin += () => eventTriggered = true;
+                repairWindow.OnKeyUsed += () => eventTriggered = true;
 
                 Assert.IsTrue(window.EndKeyDrag(new Vector2(10f, -4f)));
-                Assert.IsTrue(eventTriggered);
-                Assert.IsTrue(window.IsKeyConsumed);
+                Assert.IsTrue(eventTriggered, "복원 창에 드롭 시 OnKeyUsed 이벤트가 호출되어야 함");
+                Assert.AreEqual(1, repairWindow.CurrentStage, "복원 창의 Stage가 1로 전환되어야 함");
+                Assert.IsTrue(window.IsKeyConsumed, "consumeKeyOnUse == true이므로 열쇠가 소비되어야 함");
                 Assert.IsFalse(window.IsDraggingImage);
             }
             finally
             {
+                RepairWindow.OverrideActiveRepairWindow = null;
+                RepairWindow.OverrideRepairWindowWorldRect = null;
+                Object.DestroyImmediate(repairGo);
+                Object.DestroyImmediate(keySprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void KeyDragRequiresBeingFullyInsideWindowExeWhenOptionEnabled()
+        {
+            var tex = new Texture2D(2, 2);
+            var keySprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                window.ApplyGeometry(Vector2.zero, new Vector2(4f, 3f));
+                window.SetPrimarySprite(keySprite);
+                window.RequireWindowExeToExtractFromWindow = true;
+
+                Assert.IsTrue(window.BreakRightBorder());
+
+                // 1. WINDOW.exe가 비추지 않으면 드래그 시작 실패
+                ImageWindow.OverrideWindowExeBounds = null;
+                Assert.IsFalse(window.BeginKeyDrag(Vector2.zero));
+
+                // 2. WINDOW.exe가 온전히 포함하지 않고 일부만 걸치면 드래그 실패
+                ImageWindow.OverrideWindowExeBounds = new Rect(0.5f, 0.5f, 1f, 1f);
+                Assert.IsFalse(window.BeginKeyDrag(Vector2.zero));
+
+                // 3. WINDOW.exe가 열쇠 전체 영역을 온전히 포함하면 드래그 성공
+                ImageWindow.OverrideWindowExeBounds = new Rect(-5f, -5f, 10f, 10f);
+                Assert.IsTrue(window.BeginKeyDrag(Vector2.zero));
+                Assert.IsTrue(window.IsDraggingImage);
+            }
+            finally
+            {
+                ImageWindow.OverrideWindowExeBounds = null;
+                Object.DestroyImmediate(keySprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void ExtractedKeyPersistsInWorldAsEntityWhenWindowCloses()
+        {
+            var tex = new Texture2D(2, 2);
+            var keySprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                window.ApplyGeometry(Vector2.zero, new Vector2(4f, 3f));
+                window.SetPrimarySprite(keySprite);
+                window.RequireWindowExeToExtractFromWindow = false;
+
+                Assert.IsTrue(window.BreakRightBorder());
+                Assert.IsTrue(window.BeginKeyDrag(Vector2.zero));
+
+                // 창 밖으로 드래그
+                Vector2 outsidePos = new Vector2(6f, -3f);
+                window.UpdateKeyDrag(outsidePos);
+                window.EndKeyDrag(outsidePos);
+                Assert.IsTrue(window.IsKeyOutsideWindow);
+                Assert.IsTrue(ImageWindow.IsKeyGloballyExtracted);
+
+                // 열쇠 창을 닫음 (Destroy)
+                Object.DestroyImmediate(windowGo);
+                windowGo = null;
+
+                // 열쇠 창이 닫혀도 독립 월드 엔티티로 승격되어 유지됨
+                var worldEntity = ImageWindow.ActiveWorldKeyEntity;
+                Assert.IsNotNull(worldEntity, "창 밖으로 꺼낸 열쇠는 창이 닫혀도 월드 엔티티로 유지되어야 함");
+                Assert.AreEqual(outsidePos.x, worldEntity.transform.position.x, 0.001f);
+                Assert.AreEqual(outsidePos.y, worldEntity.transform.position.y, 0.001f);
+
+                // 월드 엔티티를 복원 창에 넣으면 이벤트 발생 및 소비됨
+                GameObject repairGo = new GameObject("RepairWindow");
+                var repairWindow = repairGo.AddComponent<RepairWindow>();
+                RepairWindow.OverrideActiveRepairWindow = repairWindow;
+                RepairWindow.OverrideRepairWindowWorldRect = new Rect(9f, -5f, 2f, 2f);
+
+                bool globalEventTriggered = false;
+                repairWindow.OnKeyUsed += () => globalEventTriggered = true;
+
+                try
+                {
+                    Assert.IsTrue(worldEntity.BeginDrag(outsidePos));
+                    Assert.IsTrue(worldEntity.EndDrag(new Vector2(10f, -4f)));
+                    Assert.IsTrue(globalEventTriggered);
+                    Assert.AreEqual(1, repairWindow.CurrentStage);
+                }
+                finally
+                {
+                    RepairWindow.OverrideActiveRepairWindow = null;
+                    RepairWindow.OverrideRepairWindowWorldRect = null;
+                    Object.DestroyImmediate(repairGo);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(keySprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void RepairWindowRetainsKeyAtDropPositionWhenConsumeKeyOnUseIsFalse()
+        {
+            var tex = new Texture2D(2, 2);
+            var keySprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+            GameObject repairGo = new GameObject("RepairWindow");
+            var repairWindow = repairGo.AddComponent<RepairWindow>();
+
+            try
+            {
+                // 열쇠 미소모 옵션(consumeKeyOnUse = false)
+                repairWindow.ConsumeKeyOnUse = false;
+                RepairWindow.OverrideActiveRepairWindow = repairWindow;
+                RepairWindow.OverrideRepairWindowWorldRect = new Rect(9f, -5f, 2f, 2f);
+
+                window.ApplyGeometry(Vector2.zero, new Vector2(4f, 3f));
+                window.SetPrimarySprite(keySprite);
+                window.RequireWindowExeToExtractFromWindow = false;
+
+                Assert.IsTrue(window.BreakRightBorder());
+                Assert.IsTrue(window.BeginKeyDrag(Vector2.zero));
+
+                Vector2 dropPos = new Vector2(10f, -4f);
+                Assert.IsTrue(window.EndKeyDrag(dropPos));
+
+                // 복원은 성공하여 이미지가 교체되었지만, 열쇠는 소모되지 않고 놓인 위치에 그대로 유지되어야 함
+                Assert.AreEqual(1, repairWindow.CurrentStage);
+                Assert.IsFalse(window.IsKeyConsumed, "consumeKeyOnUse == false이므로 열쇠가 소모되지 않아야 함");
+                Assert.IsTrue(window.IsKeyOutsideWindow);
+                Assert.IsTrue(ImageWindow.IsKeyGloballyExtracted);
+
+                var worldEntity = ImageWindow.ActiveWorldKeyEntity;
+                Assert.IsNotNull(worldEntity, "열쇠는 놓인 위치에 독립 엔티티로 유지되어야 함");
+                Assert.AreEqual(dropPos.x, worldEntity.transform.position.x, 0.001f);
+                Assert.AreEqual(dropPos.y, worldEntity.transform.position.y, 0.001f);
+            }
+            finally
+            {
+                RepairWindow.OverrideActiveRepairWindow = null;
+                RepairWindow.OverrideRepairWindowWorldRect = null;
+                Object.DestroyImmediate(repairGo);
+                Object.DestroyImmediate(keySprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void FolderWindowDoubleClickExecutesTargetRepairWindow()
+        {
+            var wmGo = new GameObject("WindowManager");
+            var wm = wmGo.AddComponent<WindowManager>();
+
+            var repairPrefabGo = new GameObject("RepairPrefab");
+            var repairPrefab = repairPrefabGo.AddComponent<RepairWindow>();
+            wm.RegisterPrefab("repair", repairPrefab);
+
+            var folderGo = new GameObject("FolderWindow");
+            var folder = folderGo.AddComponent<FolderWindow>();
+            folder.TargetExecutableWindowId = "repair";
+            folder.Attach(wm, "folder");
+
+            try
+            {
+                bool executedEvent = false;
+                folder.OnExecuted += () => executedEvent = true;
+
+                // 더블클릭 실행 시뮬레이션
+                Assert.IsTrue(folder.SimulateDoubleClick());
+                Assert.IsTrue(executedEvent, "FolderWindow 앱 아이콘 더블클릭 시 OnExecuted 이벤트가 호출되어야 함");
+                Assert.IsTrue(wm.IsWindowOpen("repair"), "FolderWindow 실행 시 대상 창('repair')이 열려야 함");
+            }
+            finally
+            {
+                Object.DestroyImmediate(folderGo);
+                Object.DestroyImmediate(repairPrefabGo);
+                Object.DestroyImmediate(wmGo);
+            }
+        }
+
+        [Test]
+        public void KeyDragAllowedWhenKeyObjectInsideWindowExeEvenIfWindowPartiallyOutside()
+        {
+            var tex = new Texture2D(2, 2);
+            var keySprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                // 열쇠 창이 (3, 0), 크기 4x3 -> 바운드는 x:[1, 5], y:[-1.5, 1.5]
+                window.ApplyGeometry(new Vector2(3f, 0f), new Vector2(4f, 3f));
+                window.SetPrimarySprite(keySprite);
+                window.RequireWindowExeToExtractFromWindow = true;
+
+                Assert.IsTrue(window.BreakRightBorder());
+
+                // WINDOW.exe가 x:[2, 4], y:[-2, 2]에 위치:
+                // 열쇠 중심점 (3, 0)은 WINDOW.exe 내부에 있지만 창의 테두리 일부(x: 1~2, x: 4~5)는 바깥에 걸쳐 있음
+                ImageWindow.OverrideWindowExeBounds = new Rect(2f, -2f, 2f, 4f);
+
+                // 창 전체가 아닌 열쇠 오브젝트(중심점)가 WINDOW.exe 안에 온전히 포함되므로 드래그 성공해야 함
+                Assert.IsTrue(window.BeginKeyDrag(new Vector2(3f, 0f)));
+                Assert.IsTrue(window.IsDraggingImage);
+            }
+            finally
+            {
+                ImageWindow.OverrideWindowExeBounds = null;
+                Object.DestroyImmediate(keySprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void PreventDraggingKeyOutsideWindowExeClampsMovementInsideWindowExeBounds()
+        {
+            var tex = new Texture2D(2, 2);
+            var keySprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                window.ApplyGeometry(Vector2.zero, new Vector2(4f, 3f));
+                window.SetPrimarySprite(keySprite);
+                window.RequireWindowExeToExtractFromWindow = false;
+                window.PreventDraggingKeyOutsideWindowExe = true;
+
+                // WINDOW.exe 영역: [-3, -3] ~ [3, 3]
+                ImageWindow.OverrideWindowExeBounds = new Rect(-3f, -3f, 6f, 6f);
+
+                Assert.IsTrue(window.BreakRightBorder());
+                Assert.IsTrue(window.BeginKeyDrag(Vector2.zero));
+
+                // 윈도우 밖인 (15, 0)으로 드래그 시도
+                window.UpdateKeyDrag(new Vector2(15f, 0f));
+
+                // WINDOW.exe 경계(xMax = 3.0f) 안으로 클램핑되어 15까지 나가지 못해야 함
+                Assert.LessOrEqual(window.DraggedKeyWorldPosition.x, 3.0f);
+                Assert.GreaterOrEqual(window.DraggedKeyWorldPosition.x, 2.5f);
+            }
+            finally
+            {
+                ImageWindow.OverrideWindowExeBounds = null;
                 Object.DestroyImmediate(keySprite);
                 Object.DestroyImmediate(tex);
             }

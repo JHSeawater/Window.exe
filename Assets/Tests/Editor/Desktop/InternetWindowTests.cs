@@ -400,14 +400,25 @@ namespace WindowExe.Desktop.Tests
                 Assert.IsFalse(internet.TryShootGun());
                 Assert.IsFalse(keyWindow.IsBorderBroken);
 
-                // 2. 열쇠 창이 총구 왼쪽에 있지만 WINDOW.exe가 덮고 있지 않으면 발사 불가
+                // 2A. 총구가 WINDOW.exe 밖에 있으면 클릭해도 사격 불발 (무반응, 도탄/반동 없음)
+                internet.ManualTick(2.0f);
                 keyWindow.MoveTo(new Vector2(-3f, 0f));
                 windowExe.MoveTo(new Vector2(20f, 20f));
                 Assert.IsFalse(internet.TryShootGun());
                 Assert.IsFalse(keyWindow.IsBorderBroken);
+                Assert.IsFalse(internet.IsGunShaking);
+                Assert.IsFalse(internet.LastShotWasRicochet);
 
-                // 3. 열쇠 창이 총구 왼쪽에 있고 WINDOW.exe가 총구와 열쇠 창을 모두 덮으면 발사 성공 & 열쇠 창 우측 테두리 파손!
+                // 2B. 총구는 WINDOW.exe 안에 덮여 있지만 열쇠 창이 WINDOW.exe에 덮이지 않으면 사격 시 우측 테두리 도탄 발생
                 Vector2 muzzlePos = internet.GetGunMuzzleWorldPosition();
+                windowExe.Resize(new Vector2(2f, 2f));
+                windowExe.MoveTo(muzzlePos); // 총구만 WINDOW.exe로 덮음 (열쇠 창은 밖)
+                Assert.IsFalse(internet.TryShootGun());
+                Assert.IsFalse(keyWindow.IsBorderBroken);
+                Assert.IsTrue(internet.LastShotWasRicochet, "총구는 덮였으나 열쇠 창이 WINDOW.exe로 덮이지 않은 상태에서 사격 시 도탄되어야 합니다.");
+                Assert.IsNotNull(internet.LastRicochetEnd);
+
+                // 3. 열쇠 창이 총구 왼쪽에 있고 WINDOW.exe가 총구와 열쇠 창을 모두 덮으면 관통 발사 성공 & 열쇠 창 양쪽 테두리 파손!
                 Assert.Less(keyWindow.OuterBounds.center.x, muzzlePos.x);
 
                 windowExe.Resize(new Vector2(12f, 6f));
@@ -417,6 +428,9 @@ namespace WindowExe.Desktop.Tests
                 Assert.AreEqual(keyWindow, detectedKeyWindow);
                 Assert.IsTrue(internet.TryShootGun());
                 Assert.IsTrue(keyWindow.IsBorderBroken);
+                Assert.IsTrue(keyWindow.IsBothBordersBroken, "양쪽 테두리가 모두 파괴되어야 합니다.");
+                Assert.IsFalse(internet.LastShotWasRicochet, "관통 시에는 도탄이 아니어야 합니다.");
+                Assert.Less(internet.LastTracerEnd.x, keyWindow.transform.position.x - keyWindow.Size.x * 0.5f, "총알 궤적이 열쇠 창 좌측 벽을 뚫고 나가야 합니다.");
                 Assert.IsTrue(keyWindow.HasActiveDebris);
                 Assert.IsTrue(keyWindow.IsShakeActive);
                 Assert.IsTrue(internet.IsGunShaking);

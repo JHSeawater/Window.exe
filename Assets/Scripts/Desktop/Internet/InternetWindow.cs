@@ -22,7 +22,8 @@ namespace WindowExe.Desktop.Desktop.Window
             Move,
             Error,
             Connected,
-            Shot
+            Shot,
+            Ricochet
         }
 
         public const int HanoiPegCount = 3;
@@ -67,6 +68,12 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private string targetKeyWindowId = "key-image";
         [SerializeField] private Vector2 gunMuzzleNormalizedOffset = new Vector2(-0.38f, 0.24f);
         [SerializeField] private AudioClip gunShotClip;
+        [SerializeField] private AudioClip gunRicochetClip;
+        [SerializeField] private float bulletTrailDuration = 0.20f;
+        [SerializeField] private float bulletTrailThickness = 0.045f;
+        [SerializeField] private Color bulletTrailColor = new Color(1f, 0.95f, 0.45f, 0.95f);
+        [Tooltip("총구가 WINDOW.exe 뷰포트 안에 있을 때에만 총 클릭 시 발사가 가능한지 여부 (기본: true)")]
+        [SerializeField] private bool requireMuzzleInWindowExeToShoot = true;
 
         [Header("Offline Network UI")]
         [SerializeField] private Sprite offlineIconSprite;
@@ -101,6 +108,7 @@ namespace WindowExe.Desktop.Desktop.Window
         private static AudioClip fallbackErrorClip;
         private static AudioClip fallbackConnectedClip;
         private static AudioClip fallbackGunShotClip;
+        private static AudioClip fallbackGunRicochetClip;
 
         private Transform contentRoot;
         private Transform backContentRoot;
@@ -203,6 +211,13 @@ namespace WindowExe.Desktop.Desktop.Window
         public bool DropdownOpen => dropdownOpen;
         public bool IsGunShaking => gunShakeTimer > 0f;
         public string TargetKeyWindowId { get => targetKeyWindowId; set => targetKeyWindowId = value; }
+        public AudioClip GunShotClip { get => gunShotClip; set => gunShotClip = value; }
+        public AudioClip GunRicochetClip { get => gunRicochetClip; set => gunRicochetClip = value; }
+        public bool LastShotWasRicochet { get; private set; }
+        public Vector2 LastTracerStart { get; private set; }
+        public Vector2 LastTracerEnd { get; private set; }
+        public Vector2? LastRicochetEnd { get; private set; }
+        public bool RequireMuzzleInWindowExeToShoot { get => requireMuzzleInWindowExeToShoot; set => requireMuzzleInWindowExeToShoot = value; }
         public InternetPhase CurrentPhase
         {
             get
@@ -1365,25 +1380,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 RefreshUI();
             }
 
-            // 원반 흔들림(Shake) 이펙트 갱신
-            bool shakingUpdated = false;
-            for (int d = 0; d < HanoiDiskCount; d++)
-            {
-                if (diskShakeTimers[d] > 0f)
-                {
-                    diskShakeTimers[d] = Mathf.Max(0f, diskShakeTimers[d] - Time.unscaledDeltaTime);
-                    shakingUpdated = true;
-                }
-            }
-
-            if (shakingUpdated)
-                ApplyDiskVisualsAndPositions();
-
-            if (gunShakeTimer > 0f)
-            {
-                gunShakeTimer = Mathf.Max(0f, gunShakeTimer - Time.unscaledDeltaTime);
-                UpdateGunShakePosition();
-            }
+            ManualTick(Time.unscaledDeltaTime);
 
             if (online && dropdownOpen && !decoded)
             {
@@ -1616,6 +1613,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 HanoiSoundType.Error => diskErrorClip != null ? diskErrorClip : GetFallbackClip(HanoiSoundType.Error),
                 HanoiSoundType.Connected => networkConnectedClip != null ? networkConnectedClip : GetFallbackClip(HanoiSoundType.Connected),
                 HanoiSoundType.Shot => gunShotClip != null ? gunShotClip : GetFallbackClip(HanoiSoundType.Shot),
+                HanoiSoundType.Ricochet => gunRicochetClip != null ? gunRicochetClip : GetFallbackClip(HanoiSoundType.Ricochet),
                 _ => null
             };
 
@@ -1656,6 +1654,9 @@ namespace WindowExe.Desktop.Desktop.Window
                 HanoiSoundType.Shot => fallbackGunShotClip != null
                     ? fallbackGunShotClip
                     : (fallbackGunShotClip = CreateRetroToneClip("GunShot", 0.14f, 440f, 75f, 0.36f)),
+                HanoiSoundType.Ricochet => fallbackGunRicochetClip != null
+                    ? fallbackGunRicochetClip
+                    : (fallbackGunRicochetClip = CreateRetroToneClip("GunRicochet", 0.16f, 1950f, 620f, 0.35f)),
                 _ => null
             };
         }
@@ -1847,7 +1848,7 @@ namespace WindowExe.Desktop.Desktop.Window
             if (keyBounds.xMin >= muzzlePos.x || keyBounds.center.x >= muzzlePos.x)
                 return false;
 
-            // 3. 중첩 조건: 총구와 열쇠 창이 모두 WINDOW.exe에 덮여 있어야 함
+            // 3. 중첩 조건: 총구 좌표가 WINDOW.exe 안에 포함되고, 열쇠 창도 WINDOW.exe와 겹쳐 있어야 함
             foreach (var process in manager.ActiveProcesses)
             {
                 if (process == null || process.State == WindowState.Minimized || !IsRevealWindowProcess(process))
@@ -1858,7 +1859,7 @@ namespace WindowExe.Desktop.Desktop.Window
                     continue;
 
                 Rect windowExeBounds = GetWindowWorldRect(windowExe);
-                bool muzzleCovered = windowExeBounds.Contains(muzzlePos) || windowExeBounds.Overlaps(muzzleRect);
+                bool muzzleCovered = windowExeBounds.Contains(muzzlePos);
                 bool keyCovered = windowExeBounds.Overlaps(keyBounds);
 
                 if (muzzleCovered && keyCovered)
@@ -1868,18 +1869,194 @@ namespace WindowExe.Desktop.Desktop.Window
             return false;
         }
 
+        public bool IsMuzzleInsideWindowExe(Vector2 muzzlePos)
+        {
+            var manager = Manager != null ? Manager : WindowManager.Instance;
+            if (manager == null) return false;
+
+            foreach (var process in manager.ActiveProcesses)
+            {
+                if (process == null || process.State == WindowState.Minimized || !IsRevealWindowProcess(process))
+                    continue;
+
+                Window windowExe = process.Instance;
+                if (windowExe == null || windowExe == this || !windowExe.gameObject.activeInHierarchy)
+                    continue;
+
+                Rect windowExeBounds = GetWindowWorldRect(windowExe);
+                if (windowExeBounds.Contains(muzzlePos))
+                    return true;
+            }
+
+            return false;
+        }
+
         public bool TryShootGun()
         {
-            if (!CanShootKeyWindow(out ImageWindow targetKeyWindow) || targetKeyWindow == null)
+            if (CurrentPhase != InternetPhase.ResultGun)
+                return false;
+
+            Vector2 muzzlePos = GetGunMuzzleWorldPosition();
+
+            // 총구가 WINDOW.exe 안에 덮여 있어야만 발사 가능 옵션 적용 (밖에서는 클릭해도 불발/무반응)
+            if (requireMuzzleInWindowExeToShoot && !IsMuzzleInsideWindowExe(muzzlePos))
                 return false;
 
             gunShakeTimer = shakeDuration * 1.5f;
             UpdateGunShakePosition();
             PlayHanoiSound(HanoiSoundType.Shot);
 
-            targetKeyWindow.BreakRightBorder();
-            OnGunFired?.Invoke(targetKeyWindow);
-            return true;
+            LastTracerStart = muzzlePos;
+            LastRicochetEnd = null;
+
+            bool canShoot = CanShootKeyWindow(out ImageWindow targetKeyWindow) && targetKeyWindow != null;
+
+            if (canShoot)
+            {
+                // 성공 관통: 총구 -> 열쇠 창 양쪽 벽을 완전히 관통
+                float leftEdgeX = targetKeyWindow.transform.position.x - targetKeyWindow.Size.x * 0.5f;
+                Vector2 exitPoint = new Vector2(leftEdgeX - 1.2f, muzzlePos.y);
+                LastTracerEnd = exitPoint;
+                LastShotWasRicochet = false;
+
+                SpawnBulletTracer(muzzlePos, exitPoint, bulletTrailDuration, bulletTrailColor);
+
+                targetKeyWindow.BreakBothBorders();
+                OnGunFired?.Invoke(targetKeyWindow);
+                return true;
+            }
+            else
+            {
+                // 실패 또는 비관통 상태: 총구 전방(왼쪽)에 열쇠 창이 존재하는지 확인
+                ImageWindow candidate = FindKeyWindowInFront(muzzlePos);
+                if (candidate != null)
+                {
+                    // 열쇠 창의 우측 테두리 표면에 맞고 도탄
+                    float rightEdgeX = candidate.transform.position.x + candidate.Size.x * 0.5f;
+                    Vector2 hitPoint = new Vector2(rightEdgeX, muzzlePos.y);
+                    Vector2 ricochetEnd = hitPoint + new Vector2(3.0f, 2.0f);
+
+                    LastTracerEnd = hitPoint;
+                    LastRicochetEnd = ricochetEnd;
+                    LastShotWasRicochet = true;
+
+                    // 1) 총구 -> 충돌 지점 직선 궤적
+                    SpawnBulletTracer(muzzlePos, hitPoint, bulletTrailDuration, bulletTrailColor);
+                    // 2) 충돌 지점 -> 튕겨나가는 도탄 궤적
+                    SpawnBulletTracer(hitPoint, ricochetEnd, bulletTrailDuration, bulletTrailColor);
+
+                    PlayHanoiSound(HanoiSoundType.Ricochet);
+                }
+                else
+                {
+                    // 전방에 대상 창이 없으면 화면 밖으로 허공 사격
+                    Vector2 missEnd = new Vector2(muzzlePos.x - 8.0f, muzzlePos.y);
+                    LastTracerEnd = missEnd;
+                    LastShotWasRicochet = false;
+
+                    SpawnBulletTracer(muzzlePos, missEnd, bulletTrailDuration, bulletTrailColor);
+                }
+
+                return false;
+            }
+        }
+
+        private ImageWindow FindKeyWindowInFront(Vector2 muzzlePos)
+        {
+            var manager = Manager != null ? Manager : WindowManager.Instance;
+            if (manager == null) return null;
+
+            if (!string.IsNullOrEmpty(targetKeyWindowId))
+            {
+                var proc = manager.GetProcess(targetKeyWindowId);
+                if (proc != null && proc.State != WindowState.Minimized && proc.Instance is ImageWindow img && img.gameObject.activeInHierarchy)
+                {
+                    Rect b = GetWindowWorldRect(img);
+                    if (b.xMin < muzzlePos.x) return img;
+                }
+            }
+
+            foreach (var proc in manager.ActiveProcesses)
+            {
+                if (proc != null && proc.State != WindowState.Minimized && proc.Instance is ImageWindow img && img.gameObject.activeInHierarchy)
+                {
+                    Rect b = GetWindowWorldRect(img);
+                    if (b.xMin < muzzlePos.x) return img;
+                }
+            }
+
+            return null;
+        }
+
+        public void SpawnBulletTracer(Vector2 start, Vector2 end, float duration, Color color)
+        {
+            float dist = Vector2.Distance(start, end);
+            if (dist < 0.001f) return;
+
+            var tracerGo = new GameObject("BulletTracer");
+            tracerGo.transform.position = (Vector3)(start + end) * 0.5f;
+
+            float angle = Mathf.Atan2(end.y - start.y, end.x - start.x) * Mathf.Rad2Deg;
+            tracerGo.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+
+            // Front (WindowFront)
+            var frontGo = new GameObject("TracerFront");
+            frontGo.transform.SetParent(tracerGo.transform, false);
+            var frontSr = frontGo.AddComponent<SpriteRenderer>();
+            frontSr.sprite = WindowTitleBar.WhiteSprite;
+            frontSr.sortingLayerName = PrimarySortingLayerName;
+            frontSr.sortingOrder = 32000;
+            frontSr.drawMode = SpriteDrawMode.Sliced;
+            frontSr.size = new Vector2(dist, bulletTrailThickness);
+            frontSr.color = color;
+
+            // Back (WindowBack)
+            var backGo = new GameObject("TracerBack");
+            backGo.transform.SetParent(tracerGo.transform, false);
+            var backSr = backGo.AddComponent<SpriteRenderer>();
+            backSr.sprite = WindowTitleBar.WhiteSprite;
+            backSr.sortingLayerName = SecondarySortingLayerName;
+            backSr.sortingOrder = 32000;
+            backSr.drawMode = SpriteDrawMode.Sliced;
+            backSr.size = new Vector2(dist, bulletTrailThickness);
+            backSr.color = color;
+
+            var fading = tracerGo.AddComponent<TracerFader>();
+            fading.Initialize(frontSr, backSr, color, duration);
+        }
+
+        private class TracerFader : MonoBehaviour
+        {
+            private SpriteRenderer front;
+            private SpriteRenderer back;
+            private Color baseColor;
+            private float maxDuration;
+            private float timer;
+
+            public void Initialize(SpriteRenderer f, SpriteRenderer b, Color col, float dur)
+            {
+                front = f;
+                back = b;
+                baseColor = col;
+                maxDuration = Mathf.Max(0.01f, dur);
+                timer = maxDuration;
+            }
+
+            private void Update()
+            {
+                timer -= Time.unscaledDeltaTime;
+                if (timer <= 0f)
+                {
+                    Destroy(gameObject);
+                    return;
+                }
+
+                float alpha = timer / maxDuration;
+                Color c = baseColor;
+                c.a = baseColor.a * alpha;
+                if (front != null) front.color = c;
+                if (back != null) back.color = c;
+            }
         }
 
         private void UpdateGunShakePosition()
@@ -1906,6 +2083,28 @@ namespace WindowExe.Desktop.Desktop.Window
             {
                 gunResultFront.transform.localPosition = basePos;
                 gunResultBack.transform.localPosition = basePos;
+            }
+        }
+
+        public void ManualTick(float deltaTime)
+        {
+            bool shakingUpdated = false;
+            for (int d = 0; d < HanoiDiskCount; d++)
+            {
+                if (diskShakeTimers[d] > 0f)
+                {
+                    diskShakeTimers[d] = Mathf.Max(0f, diskShakeTimers[d] - deltaTime);
+                    shakingUpdated = true;
+                }
+            }
+
+            if (shakingUpdated)
+                ApplyDiskVisualsAndPositions();
+
+            if (gunShakeTimer > 0f)
+            {
+                gunShakeTimer = Mathf.Max(0f, gunShakeTimer - deltaTime);
+                UpdateGunShakePosition();
             }
         }
 
