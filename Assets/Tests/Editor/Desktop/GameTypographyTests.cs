@@ -12,6 +12,66 @@ namespace WindowExe.Desktop.Tests
     public sealed class GameTypographyTests
     {
         [Test]
+        public void SharedTmpSettingsResolveLineBreakingStyleAndShaderDependencies()
+        {
+            const string resources = "Assets/Data/Desktop/Resources/";
+            var settings = AssetDatabase.LoadAssetAtPath<TMP_Settings>(resources + "TMP Settings.asset");
+            Assert.That(TMP_Settings.instance, Is.SameAs(settings));
+            Assert.That(TMP_Settings.leadingCharacters, Is.Not.Null, "The leading-character GUID must resolve.");
+            Assert.That(TMP_Settings.followingCharacters, Is.Not.Null, "The following-character GUID must resolve.");
+            Assert.That(AssetDatabase.GetAssetPath(TMP_Settings.leadingCharacters),
+                Is.EqualTo(resources + "LineBreaking Leading Characters.txt"));
+            Assert.That(AssetDatabase.GetAssetPath(TMP_Settings.followingCharacters),
+                Is.EqualTo(resources + "LineBreaking Following Characters.txt"));
+            Assert.That(TMP_Settings.defaultStyleSheet, Is.Not.Null, "The style-sheet GUID must resolve.");
+            Assert.That(AssetDatabase.GetAssetPath(TMP_Settings.defaultStyleSheet),
+                Is.EqualTo(resources + "WindowDefaultStyle.asset"));
+            TMP_Settings.LoadLinebreakingRules();
+            Assert.That(TMP_Settings.linebreakingRules.leadingCharacters, Is.Not.Empty);
+            Assert.That(TMP_Settings.linebreakingRules.followingCharacters, Is.Not.Empty);
+
+            var shader = GameTypography.Settings.TmpFont.material.shader;
+            Assert.That(shader, Is.Not.Null);
+            Assert.That(AssetDatabase.GetAssetPath(shader),
+                Is.EqualTo("Assets/Shaders/Desktop/TMP_SDF-Mobile.shader"),
+                "The shared font must use the tracked shader, not an error or local-only shader.");
+            Assert.That(shader.isSupported, Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WrappedKoreanTextBuildsVisibleGeometry(bool useUiText)
+        {
+            var preview = EditorSceneManager.NewPreviewScene();
+            var root = new GameObject("KoreanMeshRegression", typeof(RectTransform));
+            SceneManager.MoveGameObjectToScene(root, preview);
+            try
+            {
+                if (useUiText) root.AddComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+                var textObject = new GameObject("Text", typeof(RectTransform));
+                textObject.transform.SetParent(root.transform, false);
+                TMP_Text label = useUiText ? (TMP_Text)textObject.AddComponent<TextMeshProUGUI>()
+                    : textObject.AddComponent<TextMeshPro>();
+                GameTypography.Apply(label);
+                label.fontSize = 24;
+                label.rectTransform.sizeDelta = useUiText ? new Vector2(120, 200) : new Vector2(2, 5);
+                label.textWrappingMode = TextWrappingModes.Normal;
+                label.overflowMode = TextOverflowModes.Overflow;
+                label.text = "한글 줄바꿈과 문장부호를 확인합니다. 「창 너머의 기록」을 읽고 다음 단서를 찾아보세요.";
+                label.ForceMeshUpdate(true, true);
+                Assert.That(label.textInfo.characterCount, Is.EqualTo(label.text.Length));
+                Assert.That(label.textInfo.lineCount, Is.GreaterThan(1));
+                Assert.That(label.textInfo.meshInfo[0].vertexCount, Is.GreaterThan(0));
+                Assert.That(label.fontSharedMaterial.shader.name, Is.Not.EqualTo("Hidden/InternalErrorShader"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                EditorSceneManager.ClosePreviewScene(preview);
+            }
+        }
+
+        [Test]
         public void SharedFontsUseTheProvidedSourceAndAreIncludedInPrefabDependencies()
         {
             var settings = GameTypography.Settings;

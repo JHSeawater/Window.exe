@@ -55,6 +55,6 @@ MonoBehaviour:
   size: {x: 5.2, y: 3.4}
   minSize: {x: 2.4, y: 1.2}
   maxSize: {x: 20, y: 20}
-  viewportMaterial: {fileID: 2100000, guid: 8a026b30be3e24e1c8ddc53dd4afd860, type: 2}
+  viewportMaterial: {fileID: 2100000, guid: c31661001e00e7a49a9c845582788d0c, type: 2}
   fillSprite: {fileID: 0}
   viewportColor: {r: 1, g: 1, b: 1, a: 1}

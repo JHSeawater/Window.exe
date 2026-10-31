@@ -4,6 +4,7 @@
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
+/Backup/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Mm]emoryCaptures/
@@ -35,6 +36,17 @@
 /Assets/Shaders/*
 !/Assets/Shaders/Desktop/
 !/Assets/Shaders/Desktop.meta
+
+# Preserve the existing shared window shader graph and its checked dependencies only.
+!/Assets/Shader Graph/
+!/Assets/Shader Graph.meta
+/Assets/Shader Graph/*
+!/Assets/Shader Graph/Transparent.shadergraph
+!/Assets/Shader Graph/Transparent.shadergraph.meta
+!/Assets/Shader Graph/TPMaterial.mat
+!/Assets/Shader Graph/TPMaterial.mat.meta
+!/Assets/Shader Graph/TPM.mat
+!/Assets/Shader Graph/TPM.mat.meta
 
 # Share the desktop feature in each role; keep unrelated local files excluded
 /Assets/Scripts/*
