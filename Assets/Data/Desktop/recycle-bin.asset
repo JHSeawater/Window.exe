@@ -15,3 +15,4 @@ MonoBehaviour:
   itemId: recycle-bin
   displayName: "\uD734\uC9C0\uD1B5"
   icon: {fileID: 21300000, guid: 6376478312c4c85468bb76d9e9182309, type: 3}
+  corruptedIcon: {fileID: 21300000, guid: 97e3f32c95314ecaaa329fa891a05215, type: 3}

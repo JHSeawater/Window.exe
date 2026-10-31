@@ -11,7 +11,7 @@ namespace WindowExe.Desktop
         public static CRTOverlay Instance { get; private set; }
         public Material baseMaterial;
         public CRTPreset[] levels = CRTVisualState.DefaultLevels();
-        public CRTPreset spike = new CRTPreset(.38f, .32f, .65f, .16f, .60f, .25f);
+        public CRTPreset spike = new CRTPreset(.38f, .032f, .65f, .16f, .60f, .25f);
         public float transitionTime = 1f, returnTime = .2f;
         [SerializeField] private CRTQuality quality = CRTQuality.Full;
         private RawImage image;
@@ -19,6 +19,31 @@ namespace WindowExe.Desktop
         private CRTVisualState state;
         private int requestedLevel, session = -1;
         private static int generation;
+        private long controlGeneration;
+        private bool controlOwned;
+        private float baseScanlineScale = 1, baseStreakScale = 1, baseDensityScale = 1;
+        public CRTControlLease AcquireControl()
+        {
+            EnsureSession();
+            if (controlOwned) return null;
+            controlOwned = true; return new CRTControlLease(this, ++controlGeneration);
+        }
+        internal bool IsControlCurrent(long token) => session == generation && controlOwned && token == controlGeneration;
+        internal CRTControlLease TransferControl(long token)
+        {
+            if (!IsControlCurrent(token)) return null;
+            ClearBaseHorizontalNoise(); return new CRTControlLease(this, ++controlGeneration);
+        }
+        internal bool ReleaseControl(long token)
+        { if (!IsControlCurrent(token)) return false; controlOwned = false; controlGeneration++; ClearBaseHorizontalNoise(); return true; }
+        internal bool SetBaseHorizontalNoise(long token, float scanlineScale, float streakScale, float densityScale)
+        {
+            if (!IsControlCurrent(token) || !CRTVisualState.Finite(scanlineScale) || !CRTVisualState.Finite(streakScale) || !CRTVisualState.Finite(densityScale)) return false;
+            baseScanlineScale = Mathf.Clamp01(scanlineScale); baseStreakScale = Mathf.Clamp01(streakScale); baseDensityScale = Mathf.Clamp01(densityScale);
+            Apply(); return true;
+        }
+        private void ClearBaseHorizontalNoise()
+        { baseScanlineScale = baseStreakScale = baseDensityScale = 1; Apply(); }
         private bool failed, reported;
         private int width, height;
         private static readonly int[] Properties = {
@@ -27,7 +52,7 @@ namespace WindowExe.Desktop
             Shader.PropertyToID("_VignetteStrength"), Shader.PropertyToID("_TintAmount") };
         private static readonly int TimeId = Shader.PropertyToID("_EffectTime"), ResolutionId = Shader.PropertyToID("_Resolution"), SimpleId = Shader.PropertyToID("_Simple");
         public Material RuntimeMaterial => ownedMaterial;
-        public CRTPreset Displayed => state == null ? default : state.Display;
+        public CRTPreset Displayed => state == null ? default : state.DisplayWithBaseHorizontal(baseScanlineScale, baseStreakScale, baseDensityScale);
         public double EffectTime => state?.Time ?? 0;
         public int TargetLevel => requestedLevel;
         public CRTQuality Quality => quality;
@@ -52,6 +77,8 @@ namespace WindowExe.Desktop
         {
             if (session == generation) return;
             Hide(); ReleaseMaterial(); state = null; requestedLevel = 0;
+            controlOwned = false; controlGeneration++;
+            baseScanlineScale = baseStreakScale = baseDensityScale = 1;
             session = generation; failed = reported = false;
         }
         private void Hide()
@@ -136,7 +163,7 @@ namespace WindowExe.Desktop
         private void Apply()
         {
             if (ownedMaterial == null || image == null) return;
-            var p = state.Display;
+            var p = Displayed;
             ownedMaterial.SetFloat(Properties[0], p.scanline); ownedMaterial.SetFloat(Properties[1], p.grain);
             ownedMaterial.SetFloat(Properties[2], p.streak); ownedMaterial.SetFloat(Properties[3], p.streakDensity);
             ownedMaterial.SetFloat(Properties[4], p.vignette); ownedMaterial.SetFloat(Properties[5], p.tint);

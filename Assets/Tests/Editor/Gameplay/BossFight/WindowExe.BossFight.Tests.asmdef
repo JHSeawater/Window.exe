@@ -1,0 +1,6 @@
+{
+  "name": "WindowExe.BossFight.Tests",
+  "references": ["WindowExe.BossFight", "WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem", "Unity.TextMeshPro"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

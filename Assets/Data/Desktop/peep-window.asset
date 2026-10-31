@@ -13,5 +13,6 @@ MonoBehaviour:
   m_Name: peep-window
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.DesktopItemDefinition
   itemId: peepWindow
-  displayName: "\uC6B0 \uC6B0 \uC6B0 \uC300 \uC300 \uC300"
-  icon: {fileID: -2616745191284549424, guid: 91ea1d429326c42ee95ae9225a037f80, type: 3}
+  displayName: "뷁쀍꿻뛟.png"
+  icon: {fileID: -1864171691153526656, guid: 92a98a5c00738d143859fb054f409dee, type: 3}
+  corruptedIcon: {fileID: 21300000, guid: b7baa0a527764850ade8144709b9c8f4, type: 3}

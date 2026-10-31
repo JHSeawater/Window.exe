@@ -30,7 +30,7 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private Vector2 fallbackSize = new Vector2(0.8f, 0.8f);
 
         [Header("Events")]
-        public UnityEvent onClicked;
+        public UnityEvent onClicked = new UnityEvent();
 
         private SpriteRenderer spriteRenderer;
         private Collider2D objectCollider;

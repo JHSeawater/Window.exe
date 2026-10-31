@@ -40,6 +40,25 @@ namespace WindowExe.Desktop
         private float lastClickTime = -100f;
         private Vector2 lastClickPosition;
 
+        // Cancel owned popup input without confirming a rename or converting the file.
+        public void CancelPendingInteraction()
+        {
+            var input = renameInput; renameInput = null;
+            var popup = overlay; overlay = null;
+            lastClickTime = -100f;
+            if (input != null)
+            {
+                input.onEndEdit.RemoveListener(FinishRename);
+                input.gameObject.SetActive(false);
+                if (Application.isPlaying) Destroy(input.gameObject); else DestroyImmediate(input.gameObject);
+            }
+            if (popup != null)
+            {
+                popup.SetActive(false);
+                if (Application.isPlaying) Destroy(popup); else DestroyImmediate(popup);
+            }
+        }
+
         private void Awake()
         {
             icon = GetComponent<DesktopIconView>();

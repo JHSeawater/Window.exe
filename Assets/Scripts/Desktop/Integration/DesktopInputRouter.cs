@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using WindowExe.Desktop.Desktop.Window;
 using W = WindowExe.Desktop.Desktop.Window.Window;
 namespace WindowExe.Desktop
@@ -22,32 +23,54 @@ namespace WindowExe.Desktop
         private ResizeDirection? resize;
         private int button=-1, syncedFrame=-1, cancelledFrame=-1;
         private bool cancelled, moved, held, titleDrag, waitRelease;
-        private InputAction pressAction;
         private Vector2 pendingPress;
         private Mouse pendingMouse;
         private bool hasPendingPress;
+        private IDesktopInputSession session;
+        private object sessionOwner;
+        public bool HasSession => session != null;
+        public bool TryBeginSession(object ownerToken, IDesktopInputSession value)
+        {
+            if (ownerToken == null || value == null || session != null) return false;
+            Cancel(); sessionOwner = ownerToken; session = value; return true;
+        }
+        public bool EndSession(object ownerToken)
+        {
+            if (!ReferenceEquals(ownerToken, sessionOwner)) return false;
+            session = null; sessionOwner = null; window = null; Cancel(); return true;
+        }
         public DesktopPointerOwner Owner { get { Sync(); return owner; } }
         public bool IsHeld => held;
-        public string Diagnostics => $"Cancelled={cancelled}, Wait={waitRelease}, Held={held}, Press={pressScreen}, Frame={syncedFrame}/{Time.frameCount}";
+        public string Diagnostics => $"Cancelled={cancelled}, Wait={waitRelease}, Held={held}, Press={pressScreen}, Frame={syncedFrame}/{Time.frameCount}, Button={button}, Resize={resize}, Title={titleDrag}, Moved={moved}, Start={startPosition}";
         private void Awake() => Instance=this;
         private void OnEnable()
         {
             if(!Application.isPlaying) return;
-            pressAction=new InputAction("WindowPointerPress",InputActionType.Button,"<Mouse>/leftButton");
-            pressAction.started += context => { var mouse=context.control.device as Mouse; if(mouse!=null) { pendingMouse=mouse; pendingPress=mouse.position.ReadValue(); hasPendingPress=true; } };
-            pressAction.Enable();
+            InputSystem.onEvent -= CapturePress;
+            InputSystem.onEvent += CapturePress;
+        }
+        private void CapturePress(InputEventPtr input, InputDevice device)
+        {
+            if((InputState.currentUpdateType & InputUpdateType.Dynamic)==0 || !(device is Mouse mouse) ||
+                (!input.IsA<StateEvent>() && !input.IsA<DeltaStateEvent>())) return;
+            if(!mouse.leftButton.ReadValueFromEvent(input,out var value) || value<mouse.leftButton.pressPointOrDefault || mouse.leftButton.isPressed) return;
+            // Copy the press event before later events in this update can move the device state.
+            pendingMouse=mouse;
+            pendingPress=mouse.position.ReadValueFromEvent(input,out var position) ? position : mouse.position.ReadValue();
+            hasPendingPress=true;
         }
         private void OnDestroy() { if(Instance==this) Instance=null; }
         public void Configure(WindowManager windows, DesktopController surface, RectTransform bar, DesktopWindowSpace coordinates)
         { manager=windows; desktop=surface; taskbar=bar; space=coordinates; }
         public static bool DesktopAllowed(PointerEventData data=null)
-        { if(Instance==null||!Instance.isActiveAndEnabled) return true; Instance.Sync(); return !Instance.cancelled&&Instance.owner==DesktopPointerOwner.Desktop; }
+        { if(Instance==null||!Instance.isActiveAndEnabled) return true; if(Instance.session!=null) return false; Instance.Sync(); return !Instance.cancelled&&Instance.owner==DesktopPointerOwner.Desktop; }
         public static bool TaskbarAllowed(PointerEventData data=null)
-        { if(Instance==null||!Instance.isActiveAndEnabled) return true; Instance.Sync(); return !Instance.cancelled&&Instance.owner==DesktopPointerOwner.Taskbar; }
+        { if(Instance==null||!Instance.isActiveAndEnabled) return true; if(Instance.session!=null) return false; Instance.Sync(); return !Instance.cancelled&&Instance.owner==DesktopPointerOwner.Taskbar; }
         public static bool WheelAllowed(Vector2 screen)
         {
             if(Instance==null||!Instance.isActiveAndEnabled) return true;
             var r=Instance; r.Sync();
+            if(r.session!=null) return false;
             if(r.cancelled&&r.held || r.manager==null || r.manager.IsLocked) return false;
             // Wheel has no PointerDown; use hover unless an existing drag owns the pointer.
             return (!r.held||r.owner==DesktopPointerOwner.Taskbar) && r.OverBar(screen);
@@ -56,6 +79,7 @@ namespace WindowExe.Desktop
         private void Update() => Sync();
         private void Sync()
         {
+            if(session!=null) { owner=DesktopPointerOwner.Blocked; return; }
             if(syncedFrame==Time.frameCount) return;
             syncedFrame=Time.frameCount;
             var mouse=Mouse.current;
@@ -121,15 +145,25 @@ namespace WindowExe.Desktop
             }
         }
         public void CancelFor(W target) { if(ReferenceEquals(target,window)) Cancel(); }
-        public void Cancel()
+        public void FinishFor(W target)
         {
+            if(!ReferenceEquals(target,window)) return;
+            if(window!=null) window.CurrentInteraction=WindowInteraction.None;
+            window=null; button=-1; resize=null; titleDrag=false;
+            cancelled=true; cancelledFrame=Time.frameCount;
+            waitRelease=Mouse.current!=null&&Mouse.current.leftButton.isPressed;
+            owner=DesktopPointerOwner.Blocked;
+        }
+        public void Cancel(DesktopCancelReason reason = DesktopCancelReason.Explicit)
+        {
+            if(session!=null) { session.Cancel(reason); return; }
             if(!cancelled&&window!=null&&manager!=null&&manager.IsCurrent(window)&&window.CurrentInteraction!=WindowInteraction.None)
             { window.RestoreGeometryState(startGeometry); window.CurrentInteraction=WindowInteraction.None; }
             desktop?.CancelInteraction();
             cancelledFrame=Time.frameCount;
             cancelled=true; waitRelease=Mouse.current!=null&&Mouse.current.leftButton.isPressed; owner=DesktopPointerOwner.Blocked;
         }
-        private void OnApplicationFocus(bool focused) { if(!focused) Cancel(); }
-        private void OnDisable() { Cancel(); pressAction?.Dispose(); pressAction=null; hasPendingPress=false; }
+        private void OnApplicationFocus(bool focused) { if(!focused) Cancel(DesktopCancelReason.FocusLost); }
+        private void OnDisable() { Cancel(DesktopCancelReason.Disabled); InputSystem.onEvent-=CapturePress; hasPendingPress=false; }
     }
 }

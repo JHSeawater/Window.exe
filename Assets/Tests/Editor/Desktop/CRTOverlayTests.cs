@@ -80,6 +80,13 @@ namespace WindowExe.Desktop.Tests
             levels[2].grain = float.NaN;
             Assert.Throws<ArgumentException>(() => new CRTVisualState(levels, default));
         }
+        [Test] public void HorizontalProfileReducesBaseButPreservesSpikeAndOtherAxes()
+        {
+            state.SetLevel(2,0);var expected=levels[2];expected.scanline*=.35f;expected.streak*=.2f;expected.streakDensity*=.25f;
+            Equal(state.DisplayWithBaseHorizontal(.35f,.2f,.25f),expected);Equal(state.Display,levels[2]);
+            state.Spike(.3f,.2f);Equal(state.DisplayWithBaseHorizontal(.35f,.2f,.25f),state.Display);
+            state.Advance(.6);Equal(state.DisplayWithBaseHorizontal(.35f,.2f,.25f),expected);
+        }
     }
 
     public sealed class CRTOverlayLifetimeTests
@@ -100,6 +107,26 @@ namespace WindowExe.Desktop.Tests
             var effect = go.AddComponent<CRTOverlay>();
             effect.baseMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Data/Desktop/Effects/CRTOverlay.mat");
             return effect;
+        }
+        [UnityTest] public IEnumerator HorizontalProfileIsOwnedAndClearsOnTransferAndRelease()
+        {
+            var effect=CRTOverlay.Instance;effect.transitionTime=0;effect.ResetVisuals();effect.SetLevel(2);
+            var baseline=effect.Displayed;var source=EditorJsonUtility.ToJson(effect.baseMaterial);
+            var previous=effect.AcquireControl();Assert.That(previous.SetBaseHorizontalNoise(.35f,.2f,.25f),Is.True);
+            Assert.That(effect.RuntimeMaterial.GetFloat("_StreakStrength"),Is.EqualTo(baseline.streak*.2f).Within(.00001));
+            Assert.That(effect.Displayed.scanline,Is.EqualTo(baseline.scanline*.35f).Within(.00001));
+            Assert.That(effect.Displayed.streakDensity,Is.EqualTo(baseline.streakDensity*.25f).Within(.00001));
+            Assert.That(effect.Displayed.grain,Is.EqualTo(baseline.grain));Assert.That(effect.Displayed.tint,Is.EqualTo(baseline.tint));
+            Assert.That(previous.SetBaseHorizontalNoise(float.NaN,0,0),Is.False);
+            effect.Spike(.05f);Assert.That(effect.Displayed.streak,Is.EqualTo(effect.spike.streak).Within(.00001));
+            yield return new WaitForSecondsRealtime(.35f);
+            Assert.That(effect.Displayed.streak,Is.EqualTo(baseline.streak*.2f).Within(.00001));
+            var next=previous.Transfer();Assert.That(effect.Displayed.streak,Is.EqualTo(baseline.streak).Within(.00001));
+            Assert.That(previous.SetBaseHorizontalNoise(0,0,0),Is.False);
+            Assert.That(next.SetBaseHorizontalNoise(.5f,.5f,.5f),Is.True);Assert.That(previous.Release(),Is.False);
+            Assert.That(effect.Displayed.streak,Is.EqualTo(baseline.streak*.5f).Within(.00001));
+            Assert.That(next.Release(),Is.True);Assert.That(effect.Displayed.streak,Is.EqualTo(baseline.streak).Within(.00001));
+            Assert.That(EditorJsonUtility.ToJson(effect.baseMaterial),Is.EqualTo(source));
         }
         [UnityTest] public IEnumerator DisableAtEveryPhaseHidesAndReusesTheOwnedMaterial()
         {

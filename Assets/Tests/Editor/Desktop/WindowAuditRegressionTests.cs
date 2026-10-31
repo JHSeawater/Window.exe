@@ -133,14 +133,14 @@ namespace WindowExe.Desktop.Tests
                     notifications=0;
                     w.ConfigureAppearance("갱신된 한글 제목",photo.TaskbarIcon,GameTypography.Settings.TmpFont);
                     Assert.That(manager.DisplayOrder.Select(p=>p.InstanceId),Is.EqualTo(order));
-                    var front=memo.GetComponentsInChildren<Renderer>(true).Where(r=>r.sortingLayerName=="WindowFront").Min(r=>r.sortingOrder);
-                    var back=photo.GetComponentsInChildren<Renderer>(true).Where(r=>r.sortingLayerName=="WindowFront").Max(r=>r.sortingOrder);
+                    var front=memo.GetComponentsInChildren<Renderer>(true).Where(r=>r.sortingLayerName=="WindowFront" && r.enabled && r.gameObject.activeInHierarchy).Min(r=>r.sortingOrder);
+                    var back=photo.GetComponentsInChildren<Renderer>(true).Where(r=>r.sortingLayerName=="WindowFront" && r.enabled && r.gameObject.activeInHierarchy).Max(r=>r.sortingOrder);
                     Assert.That(front,Is.GreaterThan(back),"Appearance must not reset the active window to sorting slot zero");
                     Assert.That(notifications,Is.EqualTo(1));
                     Assert.That(source.GetSnapshot().Windows.Single(p=>p.ItemId==w.WindowId).Title,Is.EqualTo("갱신된 한글 제목"));
                     w.InitializeVisuals(); w.InitializeVisuals();
                     Assert.That(manager.DisplayOrder.Select(p=>p.InstanceId),Is.EqualTo(order));
-                    Assert.That(memo.GetComponentsInChildren<Renderer>(true).Where(r=>r.sortingLayerName=="WindowFront").Min(r=>r.sortingOrder),Is.EqualTo(front));
+                    Assert.That(memo.GetComponentsInChildren<Renderer>(true).Where(r=>r.sortingLayerName=="WindowFront" && r.enabled && r.gameObject.activeInHierarchy).Min(r=>r.sortingOrder),Is.EqualTo(front));
                 }
                 GeometryEqual(memo.Size,size,"Appearance changed geometry");
                 GeometryEqual(memo.transform.localPosition,position,"Appearance moved window");

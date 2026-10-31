@@ -10,6 +10,15 @@ namespace WindowExe.Desktop.Desktop.Window
         private Window owner;
         private SpriteRenderer background;
         private TextMeshPro title, buttons;
+        private bool compact;
+        private float compactButtonWidth;
+        private float compactTopResizeInset;
+        public void ConfigureCompact(float height, float buttonWidth, float topResizeInset=0)
+        {
+            compact=true; barHeight=Mathf.Max(.01f,height); compactButtonWidth=Mathf.Max(.01f,buttonWidth);
+            compactTopResizeInset=Mathf.Clamp(topResizeInset,0,barHeight/2);
+            if(owner!=null) { Initialize(owner); UpdateLayout(owner.Size); }
+        }
         private static Sprite white;
         public float BarHeight => barHeight;
         public static Sprite WhiteSprite
@@ -34,6 +43,7 @@ namespace WindowExe.Desktop.Desktop.Window
             title.textWrappingMode = TextWrappingModes.NoWrap;
             buttons.text = "";
             for(var i=0;i<3;i++) Text("Button"+i,TextAlignmentOptions.Center).text=new[]{"_","□","×"}[i];
+            if(compact) transform.Find("Button1").gameObject.SetActive(false);
             SetTitle(window.WindowTitle);
         }
         private TextMeshPro Text(string name, TextAlignmentOptions alignment)
@@ -53,6 +63,21 @@ namespace WindowExe.Desktop.Desktop.Window
             transform.localPosition = new Vector3(0, size.y/2 + barHeight/2, 0);
             GetComponent<BoxCollider2D>().size = new Vector2(size.x,barHeight);
             background.size = new Vector2(size.x,barHeight);
+            if(compact)
+            {
+                var w=Mathf.Min(compactButtonWidth,size.x/2);
+                title.rectTransform.sizeDelta=new Vector2(Mathf.Max(0,size.x-w*2-.04f),barHeight);
+                title.transform.localPosition=new Vector3(-w,0,0); title.fontSize=barHeight*5;
+                buttons.gameObject.SetActive(false);
+                for(var i=0;i<3;i+=2)
+                {
+                    var glyph=transform.Find("Button"+i).GetComponent<TextMeshPro>();
+                    glyph.rectTransform.sizeDelta=new Vector2(w,barHeight-compactTopResizeInset);
+                    glyph.transform.localPosition=new Vector3(size.x/2-w*(i==0?1.5f:.5f),-compactTopResizeInset/2,0);
+                    glyph.fontSize=(barHeight-compactTopResizeInset)*5; glyph.color=i==2?new Color(1,.28f,.24f):Color.white;
+                }
+                return;
+            }
             title.rectTransform.sizeDelta = new Vector2(Mathf.Max(.1f,size.x-1.4f),barHeight);
             title.transform.localPosition = new Vector3(-.65f,0,0);
             buttons.rectTransform.sizeDelta = new Vector2(1.2f,barHeight);
@@ -65,6 +90,14 @@ namespace WindowExe.Desktop.Desktop.Window
         {
             if (owner == null) return -1;
             var p = transform.InverseTransformPoint(point);
+            if(compact)
+            {
+                if(p.y < -barHeight/2 || p.y > barHeight/2-compactTopResizeInset || p.x > owner.Size.x/2) return -1;
+                var w=Mathf.Min(compactButtonWidth,owner.Size.x/2);
+                if(p.x>=owner.Size.x/2-w) return 2;
+                if(p.x>=owner.Size.x/2-w*2) return 0;
+                return -1;
+            }
             var start = owner.Size.x/2-1.25f;
             if (p.y < -barHeight/2 || p.y > barHeight/2 || p.x < start || p.x > start+1.2f) return -1;
             return Mathf.Min(2,Mathf.FloorToInt((p.x-start)/.4f));

@@ -4,6 +4,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using WindowExe.Desktop;
+using UnityEngine.TestTools;
+using UnityEngine.SceneManagement;
 
 namespace WindowExe.Desktop.Tests
 {
@@ -64,14 +66,21 @@ namespace WindowExe.Desktop.Tests
             Assert.AreEqual(1f, brightColor.a, 0.01f, "Max bright alpha should be 1.");
         }
 
-        [Test]
-        public void TriggerStart_SetsTransitioningAndInvokesEventOnce()
+        [UnityTest]
+        public IEnumerator MissingIntroLoadsDesktopAndInvokesEventOnce()
         {
+            Object.DestroyImmediate(rootGo);
+            rootGo = null;
+            yield return new EnterPlayMode();
+            rootGo = new GameObject("Missing intro start test");
+            controller = rootGo.AddComponent<StartScreenController>();
+            controller.Configure(null, null, null, "Desktop");
             var eventCount = 0;
             controller.OnStartTriggered += () => eventCount++;
 
             Assert.IsFalse(controller.IsTransitioning);
 
+            LogAssert.Expect(LogType.Warning, "[StartScreenController] Intro assets unavailable; loading Desktop.");
             controller.TriggerStart();
 
             Assert.IsTrue(controller.IsTransitioning);
@@ -80,6 +89,17 @@ namespace WindowExe.Desktop.Tests
             // Second trigger should be ignored
             controller.TriggerStart();
             Assert.AreEqual(1, eventCount, "Duplicate triggers should be ignored.");
+            yield return null;
+            yield return null;
+            Assert.AreEqual("Desktop", SceneManager.GetActiveScene().name);
+            Assert.IsNotNull(Object.FindAnyObjectByType<DesktopController>());
+            yield return new ExitPlayMode();
+        }
+
+        [UnityTearDown]
+        public IEnumerator LeavePlayModeAfterFailure()
+        {
+            if (UnityEditor.EditorApplication.isPlaying) yield return new ExitPlayMode();
         }
     }
 }

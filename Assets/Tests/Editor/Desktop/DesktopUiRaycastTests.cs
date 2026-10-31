@@ -240,6 +240,8 @@ namespace WindowExe.Desktop.Tests
         public IEnumerator EscapeDisableAndResizeCancelWithoutLeavingSelectionBoxOrPartialMove()
         {
             var second = ExtraIcon();
+            var initialFirstPosition = icon.Rect.anchoredPosition;
+            var initialSecondPosition = second.Rect.anchoredPosition;
             var module = events.GetComponent<InputSystemUIInputModule>();
             var mouse = InputSystem.AddDevice<Mouse>("CancelRegionMouse");
             var keyboard = InputSystem.AddDevice<Keyboard>("CancelRegionKeyboard");
@@ -274,8 +276,8 @@ namespace WindowExe.Desktop.Tests
                 desktop.BeginDrag(icon, drag);
                 second.gameObject.SetActive(false);
                 Assert.That(desktop.IsDragging, Is.False);
-                Assert.That(icon.Rect.anchoredPosition, Is.EqualTo(new Vector2(20, -20)));
-                Assert.That(second.Rect.anchoredPosition, Is.EqualTo(new Vector2(160, -20)));
+                Assert.That(icon.Rect.anchoredPosition, Is.EqualTo(initialFirstPosition));
+                Assert.That(second.Rect.anchoredPosition, Is.EqualTo(initialSecondPosition));
                 Assert.That(desktop.SelectedIcons, Is.EqualTo(new[] { icon }));
                 second.gameObject.SetActive(true);
                 desktop.BeginSelection(data);

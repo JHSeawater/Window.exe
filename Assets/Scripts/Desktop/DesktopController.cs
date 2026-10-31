@@ -70,7 +70,31 @@ namespace WindowExe.Desktop
         private void Start()
         {
             Canvas.ForceUpdateCanvases();
+            ArrangeIcons();
             EnsureValidLayout();
+        }
+
+        // Initial arrangement only; ordinary dragging and later layout repairs keep the user's placement.
+        public void ArrangeIcons()
+        {
+            if (iconArea == null || selecting || dragging != null) return;
+            const float padding = 8, gap = 12;
+            var cell = Vector2.zero;
+            foreach (var icon in icons)
+                if (IsAvailable(icon)) cell = Vector2.Max(cell, DesktopLayout.BoundsInParent(icon.Rect, iconArea).size);
+            if (cell.x <= 0 || cell.y <= 0) return;
+            var rows = Mathf.Max(1, Mathf.FloorToInt((iconArea.rect.height - padding * 2 + gap) / (cell.y + gap)));
+            var index = 0;
+            foreach (var icon in icons)
+            {
+                if (!IsAvailable(icon)) continue;
+                var bounds = DesktopLayout.BoundsInParent(icon.Rect, iconArea);
+                var topLeft = new Vector2(iconArea.rect.xMin + padding + index / rows * (cell.x + gap),
+                    iconArea.rect.yMax - padding - index % rows * (cell.y + gap));
+                var offset = topLeft - new Vector2(bounds.xMin, bounds.yMax);
+                icon.Rect.localPosition += new Vector3(offset.x, offset.y, 0);
+                index++;
+            }
         }
 
         public void Select(DesktopIconView icon)

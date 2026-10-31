@@ -1,0 +1,5 @@
+{
+  "name": "WindowExe.BossFight.Editor",
+  "references": ["WindowExe.BossFight", "WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem", "Unity.TextMeshPro"],
+  "includePlatforms": ["Editor"]
+}

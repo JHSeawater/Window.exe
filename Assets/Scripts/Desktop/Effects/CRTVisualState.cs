@@ -27,13 +27,20 @@ namespace WindowExe.Desktop
         public double Time { get; private set; }
         public CRTPreset Base { get; private set; }
         public float Weight => Time < holdEnd ? 1 : release > 0 ? Mathf.Clamp01(1 - (float)((Time - holdEnd) / release)) : 0;
-        public CRTPreset Display => CRTPreset.Lerp(Base, CRTPreset.Max(Base, peak), Weight);
+        public CRTPreset Display => DisplayWithBaseHorizontal(1, 1, 1);
+        public CRTPreset DisplayWithBaseHorizontal(float scanlineScale, float streakScale, float densityScale)
+        {
+            var value = Base;
+            value.scanline *= Mathf.Clamp01(scanlineScale); value.streak *= Mathf.Clamp01(streakScale);
+            value.streakDensity *= Mathf.Clamp01(densityScale);
+            return CRTPreset.Lerp(value, CRTPreset.Max(value, peak), Weight);
+        }
         public static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         public static CRTPreset[] DefaultLevels() => new[] {
-            new CRTPreset(.16f, .035f, .18f, .02f, .22f, 0),
-            new CRTPreset(.24f, .09f, .35f, .05f, .35f, .06f),
-            new CRTPreset(.30f, .15f, .48f, .10f, .48f, .15f),
-            new CRTPreset(.36f, .22f, .60f, .20f, .60f, .25f) };
+            new CRTPreset(.16f, .0035f, .18f, .02f, .22f, 0),
+            new CRTPreset(.24f, .009f, .35f, .05f, .35f, .06f),
+            new CRTPreset(.30f, .015f, .48f, .10f, .48f, .15f),
+            new CRTPreset(.36f, .022f, .60f, .20f, .60f, .25f) };
         public CRTVisualState(CRTPreset[] presets, CRTPreset spike)
         {
             if (presets == null || presets.Length != 4 || !spike.IsFinite) throw new ArgumentException("Four finite CRT presets are required.");

@@ -1397,11 +1397,18 @@ namespace WindowExe.Desktop.Desktop.Window
                 }
             }
 
-            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+            if (Mouse.current == null ||
+                !Mouse.current.leftButton.wasPressedThisFrame)
                 return;
 
-            if (!TryGetMouseWorldPosition(out Vector3 mouseWorld))
-                return;
+            PointerLeftPressed(Mouse.current.position.ReadValue());
+        }
+
+        public void PointerLeftPressed(Vector2 position)
+        {
+            if (!initialized || !ReferencesReady()) return;
+            bool online = IsOnline;
+            if (!TryGetPointerWorldPosition(position, out Vector3 mouseWorld)) return;
 
             Vector2 local = transform.InverseTransformPoint(mouseWorld);
 
@@ -1472,7 +1479,12 @@ namespace WindowExe.Desktop.Desktop.Window
             mouseWorld = Vector3.zero;
             if (Mouse.current == null) return false;
 
-            Vector2 screenPos = Mouse.current.position.ReadValue();
+            return TryGetPointerWorldPosition(Mouse.current.position.ReadValue(), out mouseWorld);
+        }
+
+        private bool TryGetPointerWorldPosition(Vector2 screenPos, out Vector3 mouseWorld)
+        {
+            mouseWorld = Vector3.zero;
             if (DesktopWindowSpace.Instance != null &&
                 DesktopWindowSpace.Instance.Valid &&
                 DesktopWindowSpace.Instance.TryWorld(screenPos, out Vector2 world2D))

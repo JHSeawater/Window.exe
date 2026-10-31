@@ -19,6 +19,7 @@ namespace WindowExe.Desktop
         public RectTransform Rect => (RectTransform)transform;
         public DesktopController Desktop => desktop;
         public Text NameLabel => nameLabel;
+        public Image IconImage => iconImage;
 
         public void SetIconSprite(Sprite sprite)
         {

@@ -30,6 +30,19 @@ namespace WindowExe.Desktop.Desktop.Window
         private readonly List<WindowProcess> stack = new List<WindowProcess>();
         private long sequence;
         private bool publishing, pending;
+        private IWindowSessionPolicy sessionPolicy;
+        private object policyOwner;
+        public IWindowSessionPolicy SessionPolicy => sessionPolicy;
+        public bool TryInstallSessionPolicy(object owner, IWindowSessionPolicy policy)
+        {
+            if (owner == null || policy == null || sessionPolicy != null) return false;
+            policyOwner = owner; sessionPolicy = policy; Notify(); return true;
+        }
+        public bool RemoveSessionPolicy(object owner)
+        {
+            if (!ReferenceEquals(owner, policyOwner)) return false;
+            sessionPolicy = null; policyOwner = null; Notify(); return true;
+        }
         public string ActiveWindowId { get; private set; }
         public bool IsLocked { get; private set; }
         public bool HasModal => Modal()!=null;
@@ -59,11 +72,15 @@ namespace WindowExe.Desktop.Desktop.Window
         public void Configure(Transform root, IEnumerable<WindowPrefabEntry> entries)
         { windowRoot = root; registeredPrefabs = new List<WindowPrefabEntry>(entries); }
         public void RegisterPrefab(string id, Window prefab) { registeredPrefabs.RemoveAll(x=>x.id==id); registeredPrefabs.Add(new WindowPrefabEntry{id=id,prefab=prefab}); }
-        public bool CanRequest(Window expected, WindowAction action)
+        public Window GetRegisteredPrefab(string id)
+        { foreach(var entry in registeredPrefabs) if(entry.id==id) return entry.prefab; return null; }
+        public bool CanRequest(Window expected, WindowAction action, object authority = null)
         {
             if(IsLocked||!IsCurrent(expected)) return false;
+            if(sessionPolicy != null && !sessionPolicy.AllowRequest(expected, action, authority)) return false;
             var p=GetProcess(expected.WindowId); var modal=Modal();
             if(modal!=null&&modal!=p && !((action==WindowAction.Activate||action==WindowAction.Restore)&&IsOwner(p,modal))) return false;
+            if(modal!=null&&modal!=p&&sessionPolicy!=null&&!sessionPolicy.AllowRequest(modal.Instance,action,authority)) return false;
             return action!=WindowAction.Minimize||expected.CanMinimize;
         }
         public WindowProcess GetProcess(string id) => id != null && processes.TryGetValue(id, out var p) ? p : null;
@@ -71,11 +88,12 @@ namespace WindowExe.Desktop.Desktop.Window
         { foreach (var p in processes.Values) if (p.InstanceId == id) return p; return null; }
         public bool IsWindowOpen(string id) => GetProcess(id) != null;
         public bool IsCurrent(Window w) => w != null && GetProcess(w.WindowId)?.Instance == w;
-        public Window Open(string id)
+        public Window Open(string id, object authority = null)
         {
             if (IsLocked || string.IsNullOrEmpty(id)) return null;
+            if (sessionPolicy != null && !sessionPolicy.AllowOpen(id, authority)) return null;
             var existing = GetProcess(id);
-            if (existing != null) { TryRequest(existing.Instance, WindowAction.Restore); return existing.Instance; }
+            if (existing != null) { var restored = TryRequest(existing.Instance, WindowAction.Restore, authority); return sessionPolicy == null || restored ? existing.Instance : null; }
             if (Modal() != null) return null;
             Window prefab = null;
             foreach (var entry in registeredPrefabs) if (entry.id == id) { prefab = entry.prefab; break; }
@@ -102,9 +120,10 @@ namespace WindowExe.Desktop.Desktop.Window
         public void Close(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Close);
         public void ToggleMaximize(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Maximize);
         public void FocusWindow(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Activate);
-        public bool TryRequest(Window expected, WindowAction action)
+        public bool TryRequest(Window expected, WindowAction action, object authority = null)
         {
             if (IsLocked || !IsCurrent(expected)) return false;
+            if (sessionPolicy != null && !sessionPolicy.AllowRequest(expected, action, authority)) return false;
             var p = GetProcess(expected.WindowId);
             var modal = Modal();
             if (modal != null && modal != p)
@@ -113,6 +132,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 else return false;
             }
             var w = p.Instance;
+            if (sessionPolicy != null && !sessionPolicy.AllowRequest(w, action, authority)) return false;
             if (action == WindowAction.Minimize && !w.CanMinimize) return false;
             if (action == WindowAction.Close)
             {
@@ -123,7 +143,8 @@ namespace WindowExe.Desktop.Desktop.Window
             }
             if (action == WindowAction.Minimize)
             {
-                DesktopInputRouter.Instance?.CancelFor(w);
+                if (sessionPolicy != null && sessionPolicy.KeepPositionOnMinimize(w)) DesktopInputRouter.Instance?.FinishFor(w);
+                else DesktopInputRouter.Instance?.CancelFor(w);
                 p.State = WindowState.Minimized;
                 w.gameObject.SetActive(false);
                 ChooseActive();

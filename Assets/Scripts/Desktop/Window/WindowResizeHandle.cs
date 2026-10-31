@@ -7,6 +7,9 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private float borderThickness = .12f, cornerSize = .22f;
         private Window owner;
         private SingleResizeHandle[] handles;
+        private float exteriorPadding;
+        public void ConfigureSize(float border, float corner, float extraOutside=0)
+        { borderThickness=Mathf.Max(.001f,border); cornerSize=Mathf.Max(.001f,corner); exteriorPadding=Mathf.Max(0,extraOutside); if(owner!=null) UpdateLayout(owner.Size); }
         public void Initialize(Window window)
         {
             owner = window;
@@ -25,14 +28,17 @@ namespace WindowExe.Desktop.Desktop.Window
         public void UpdateLayout(Vector2 size)
         {
             if (handles == null) return;
-            var l=-size.x/2; var r=size.x/2; var b=-size.y/2; var t=size.y/2+GetBarHeight();
+            // Enlarge only outside the frame, preserving content and title-bar hit areas.
+            var shift=exteriorPadding/2;
+            var l=-size.x/2-shift; var r=size.x/2+shift; var b=-size.y/2-shift; var t=size.y/2+GetBarHeight()+shift;
+            var border=borderThickness+exteriorPadding; var corner=cornerSize+exteriorPadding;
             for(var i=0;i<8;i++)
             {
                 var h=handles[i];
                 var x=i==0||i==4||i==6?l:i==1||i==5||i==7?r:0;
                 var y=i==2||i==4||i==5?t:i==3||i==6||i==7?b:(b+t)/2;
                 h.transform.localPosition=new Vector3(x,y,0);
-                h.Collider.size=i>=4?new Vector2(cornerSize,cornerSize):i<2?new Vector2(borderThickness,Mathf.Max(.1f,t-b-cornerSize)):new Vector2(Mathf.Max(.1f,size.x-cornerSize),borderThickness);
+                h.Collider.size=i>=4?new Vector2(corner,corner):i<2?new Vector2(border,Mathf.Max(.1f,t-b-corner)):new Vector2(Mathf.Max(.1f,r-l-corner),border);
             }
         }
         public ResizeDirection? DirectionAt(Vector2 point)

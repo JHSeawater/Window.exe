@@ -39,6 +39,7 @@ namespace WindowExe.Desktop.Desktop.Window
         // Legacy content key. The process InstanceId is the immutable request identity.
         public string WindowId { get; set; }
         public WindowManager Manager => manager;
+        public IWindowGeometryConstraint GeometryConstraint { get; set; }
         public bool IsMaximized { get; private set; }
         public bool ShowInTaskbar => showInTaskbar;
         public bool CanMinimize => canMinimize;
@@ -217,6 +218,14 @@ namespace WindowExe.Desktop.Desktop.Window
         }
         private void ApplyDisplayGeometry(Vector2 position, Vector2 newSize)
         {
+            if (GeometryConstraint != null)
+            {
+                if (!GeometryConstraint.TryConstrain(this, ref position, ref newSize))
+                {
+                    restorePosition=transform.localPosition; restoreSize=size; hasNormalGeometry=true; return;
+                }
+                restorePosition=position; restoreSize=newSize; hasNormalGeometry=true;
+            }
             transform.localPosition = new Vector3(position.x, position.y, transform.localPosition.z);
             size=PositiveSize(newSize);
             ApplySize(size);
@@ -277,6 +286,7 @@ namespace WindowExe.Desktop.Desktop.Window
         public virtual void ToggleMaximize() { if (IsMaximized) Restore(); else Maximize(); }
         public void ConstrainTo(Rect bounds)
         {
+            if (GeometryConstraint != null && GeometryConstraint.DeferAreaConstraint) return;
             if (bounds.width <= 0 || bounds.height <= BarHeight) return;
             EnsureNormalGeometry();
             if (IsMaximized) { ApplyDisplayGeometry(new Vector2(bounds.center.x, bounds.center.y - BarHeight / 2), new Vector2(bounds.width, bounds.height - BarHeight)); return; }

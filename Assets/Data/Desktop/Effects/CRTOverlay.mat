@@ -30,9 +30,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _EffectTime: 0
-    - _GrainStrength: 0.08
+    - _GrainStrength: 0.0035
     - _RollSpeed: 0.12
-    - _RollStrength: 0.025
+    - _RollStrength: 0.000625
     - _ScanlinePeriod: 3
     - _ScanlineStrength: 0.25
     - _Simple: 0

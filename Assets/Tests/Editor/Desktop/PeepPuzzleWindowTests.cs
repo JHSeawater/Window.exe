@@ -153,6 +153,8 @@ namespace WindowExe.Desktop.Tests
             puzzleWindow.SetupPuzzleObjects(clues, danger, watcher, escape);
 
             // 탈출 오브젝트 클릭
+            var escapePosition = (Vector2)escape.transform.position;
+            puzzleWindow.OverridePeepViewport = new Rect(escapePosition.x - 1, escapePosition.y - 1, 2, 2);
             var success = puzzleWindow.HandlePeepClick(escape.transform.position);
 
             Assert.IsTrue(success);

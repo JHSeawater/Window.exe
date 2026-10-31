@@ -68,6 +68,38 @@
 !/Assets/Prefabs/Desktop/
 !/Assets/Prefabs/Desktop.meta
 
+# Boss fight: share only this gameplay feature and its parent metadata.
+!/Assets/Scripts/Gameplay/
+!/Assets/Scripts/Gameplay.meta
+/Assets/Scripts/Gameplay/*
+!/Assets/Scripts/Gameplay/BossFight/
+!/Assets/Scripts/Gameplay/BossFight.meta
+!/Assets/Editor/Gameplay/
+!/Assets/Editor/Gameplay.meta
+/Assets/Editor/Gameplay/*
+!/Assets/Editor/Gameplay/BossFight/
+!/Assets/Editor/Gameplay/BossFight.meta
+!/Assets/Tests/Editor/Gameplay/
+!/Assets/Tests/Editor/Gameplay.meta
+/Assets/Tests/Editor/Gameplay/*
+!/Assets/Tests/Editor/Gameplay/BossFight/
+!/Assets/Tests/Editor/Gameplay/BossFight.meta
+!/Assets/Prefabs/Gameplay/
+!/Assets/Prefabs/Gameplay.meta
+/Assets/Prefabs/Gameplay/*
+!/Assets/Prefabs/Gameplay/BossFight/
+!/Assets/Prefabs/Gameplay/BossFight.meta
+!/Assets/Data/Gameplay/
+!/Assets/Data/Gameplay.meta
+/Assets/Data/Gameplay/*
+!/Assets/Data/Gameplay/BossFight/
+!/Assets/Data/Gameplay/BossFight.meta
+!/Assets/Shaders/Gameplay/
+!/Assets/Shaders/Gameplay.meta
+/Assets/Shaders/Gameplay/*
+!/Assets/Shaders/Gameplay/BossFight/
+!/Assets/Shaders/Gameplay/BossFight.meta
+
 # Share the desktop's source artwork; keep unrelated local artwork excluded
 /Assets/Art/*
 !/Assets/Art/Icon/
@@ -76,6 +108,18 @@
 !/Assets/Art/Screen.meta
 !/Assets/Art/Fonts/
 !/Assets/Art/Fonts.meta
+!/Assets/Art/Warning/
+!/Assets/Art/Warning.meta
+/Assets/Art/Warning/*
+!/Assets/Art/Warning/Cannot_Move.png
+!/Assets/Art/Warning/Cannot_Move.png.meta
+!/Assets/Art/creature/
+!/Assets/Art/creature.meta
+/Assets/Art/creature/*
+!/Assets/Art/creature/Iris.png
+!/Assets/Art/creature/Iris.png.meta
+!/Assets/Art/creature/Red_Pupil_2.png
+!/Assets/Art/creature/Red_Pupil_2.png.meta
 
 # Local prototype depends on scripts outside the shared baseline
 /Assets/Scenes/DesktopPrototype.unity

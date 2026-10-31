@@ -15,3 +15,4 @@ MonoBehaviour:
   itemId: key-file
   displayName: key.txt
   icon: {fileID: 21300000, guid: 5620ed1f33b3eb448836055570f3be8a, type: 3}
+  corruptedIcon: {fileID: 21300000, guid: b7baa0a527764850ade8144709b9c8f4, type: 3}

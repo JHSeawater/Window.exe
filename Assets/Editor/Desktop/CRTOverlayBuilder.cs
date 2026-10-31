@@ -39,7 +39,7 @@ namespace WindowExe.Desktop.Editor
             {
                 var shader = Shader.Find("WindowExe/CRTOverlay");
                 if (shader == null || !shader.isSupported) throw new InvalidOperationException("A supported CRT shader is required.");
-                material = new Material(shader); material.SetFloat("_RollStrength", .025f);
+                material = new Material(shader); material.SetFloat("_RollStrength", .000625f);
                 AssetDatabase.CreateAsset(material, MaterialPath);
             }
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null) return;

@@ -1,0 +1,5 @@
+{
+  "name": "WindowExe.BossFight",
+  "rootNamespace": "WindowExe.BossFight",
+  "references": ["WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem", "Unity.TextMeshPro", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime"]
+}

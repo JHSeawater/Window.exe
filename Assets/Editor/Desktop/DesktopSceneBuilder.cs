@@ -124,7 +124,6 @@ namespace WindowExe.Desktop.Editor
             {
                 Item("recycle-bin", "휴지통", "Assets/Art/Icon/bin.png"),
                 Item("memo", "메모.txt", "Assets/Art/Icon/Icon_Memo.png"),
-                Item("photos", "사진", "Assets/Art/Icon/Album.png"),
                 Item("internet", "인터넷", "Assets/Art/Icon/internet.png")
             };
             for (var i = 0; i < definitions.Length; i++)
@@ -145,19 +144,20 @@ namespace WindowExe.Desktop.Editor
             InstallTaskbar(desktop);
             DesktopIntegrationBuilder.Install(desktop);
             CRTOverlayBuilder.Install(scene);
+            desktop.ArrangeIcons();
             desktop.EnsureValidLayout();
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
             Selection.activeGameObject = canvasObject;
         }
 
-        private static DesktopItemDefinition Item(string id, string title, string imagePath)
+        private static DesktopItemDefinition Item(string id, string title, string imagePath, string spriteName = null)
         {
             var path = "Assets/Data/Desktop/" + id + ".asset";
             var existing = AssetDatabase.LoadAssetAtPath<DesktopItemDefinition>(path);
             if (existing != null) return existing;
             var importer = (TextureImporter)AssetImporter.GetAtPath(imagePath);
-            if (importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single)
+            if (spriteName == null && (importer.textureType != TextureImporterType.Sprite || importer.spriteImportMode != SpriteImportMode.Single))
             {
                 importer.textureType = TextureImporterType.Sprite;
                 importer.spriteImportMode = SpriteImportMode.Single;
@@ -168,7 +168,7 @@ namespace WindowExe.Desktop.Editor
             var sprites = AssetDatabase.LoadAllAssetsAtPath(imagePath).OfType<Sprite>().ToArray();
             if (sprites.Length == 0) throw new InvalidOperationException("Missing icon sprite: " + imagePath);
             var definition = ScriptableObject.CreateInstance<DesktopItemDefinition>();
-            definition.Configure(id, title, sprites[0]);
+            definition.Configure(id, title, spriteName == null ? sprites[0] : sprites.Single(s => s.name == spriteName));
             AssetDatabase.CreateAsset(definition, path);
             return definition;
         }

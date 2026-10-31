@@ -88,32 +88,32 @@ MonoBehaviour:
   baseMaterial: {fileID: 2100000, guid: f476bae3a699bf443af6e6522feebcf3, type: 2}
   levels:
   - scanline: 0.16
-    grain: 0.035
+    grain: 0.0035
     streak: 0.18
     streakDensity: 0.02
     vignette: 0.22
     tint: 0
   - scanline: 0.24
-    grain: 0.09
+    grain: 0.009
     streak: 0.35
     streakDensity: 0.05
     vignette: 0.35
     tint: 0.06
   - scanline: 0.3
-    grain: 0.15
+    grain: 0.015
     streak: 0.48
     streakDensity: 0.1
     vignette: 0.48
     tint: 0.15
   - scanline: 0.36
-    grain: 0.22
+    grain: 0.022
     streak: 0.6
     streakDensity: 0.2
     vignette: 0.6
     tint: 0.25
   spike:
     scanline: 0.38
-    grain: 0.32
+    grain: 0.032
     streak: 0.65
     streakDensity: 0.16
     vignette: 0.6

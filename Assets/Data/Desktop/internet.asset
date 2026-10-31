@@ -15,3 +15,4 @@ MonoBehaviour:
   itemId: internet
   displayName: "\uC778\uD130\uB137"
   icon: {fileID: 21300000, guid: 400a06b0075e66e40b3f76b2b5c6fd5b, type: 3}
+  corruptedIcon: {fileID: 21300000, guid: cc37fab100c64d86a3cd2744326d6e03, type: 3}

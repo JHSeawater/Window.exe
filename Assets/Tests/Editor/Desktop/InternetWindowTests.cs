@@ -117,6 +117,35 @@ namespace WindowExe.Desktop.Tests
         }
 
         [Test]
+        public void CollectedPointerPositionsCanMoveOfflineHanoiDisk()
+        {
+            GameObject cameraObject = null;
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                cameraObject = new GameObject("Pointer projection camera", typeof(Camera));
+                cameraObject.tag = "MainCamera";
+                camera = cameraObject.GetComponent<Camera>();
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0, 0, -10);
+            }
+            try
+            {
+                var pegs = (Rect[])typeof(InternetWindow).GetField("pegRects",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(internet);
+                internet.PointerLeftPressed(camera.WorldToScreenPoint(internet.transform.TransformPoint(pegs[0].center)));
+                Assert.AreEqual(0, internet.SelectedPeg);
+                internet.PointerLeftPressed(camera.WorldToScreenPoint(internet.transform.TransformPoint(pegs[1].center)));
+                CollectionAssert.AreEqual(new[] { 3 }, internet.GetPegDiskNumbers(1));
+                Assert.IsFalse(internet.IsOnline);
+            }
+            finally
+            {
+                if (cameraObject != null) Object.DestroyImmediate(cameraObject);
+            }
+        }
+
+        [Test]
         public void EnforcesHanoiRuleOnlySmallerNumberAllowedBelow()
         {
             // 3번 원반을 두 번째 막대(peg 1)로 이동
@@ -426,7 +455,27 @@ namespace WindowExe.Desktop.Tests
 
                 Assert.IsTrue(internet.CanShootKeyWindow(out var detectedKeyWindow));
                 Assert.AreEqual(keyWindow, detectedKeyWindow);
-                Assert.IsTrue(internet.TryShootGun());
+                var pointerCamera = Camera.main;
+                GameObject pointerCameraObject = null;
+                if (pointerCamera == null)
+                {
+                    pointerCameraObject = new GameObject("Gun pointer projection camera", typeof(Camera));
+                    pointerCameraObject.tag = "MainCamera";
+                    pointerCamera = pointerCameraObject.GetComponent<Camera>();
+                    pointerCamera.orthographic = true;
+                    pointerCamera.transform.position = new Vector3(0, 0, -10);
+                }
+                int fired = 0;
+                internet.OnGunFired += _ => fired++;
+                try
+                {
+                    internet.PointerLeftPressed(pointerCamera.WorldToScreenPoint(internet.GetGunWorldRect().center));
+                    Assert.AreEqual(1, fired);
+                }
+                finally
+                {
+                    if (pointerCameraObject != null) Object.DestroyImmediate(pointerCameraObject);
+                }
                 Assert.IsTrue(keyWindow.IsBorderBroken);
                 Assert.IsTrue(keyWindow.IsBothBordersBroken, "양쪽 테두리가 모두 파괴되어야 합니다.");
                 Assert.IsFalse(internet.LastShotWasRicochet, "관통 시에는 도탄이 아니어야 합니다.");

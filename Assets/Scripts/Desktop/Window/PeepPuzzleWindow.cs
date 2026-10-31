@@ -315,6 +315,7 @@ namespace WindowExe.Desktop.Desktop.Window
         public bool HandlePeepClick(Vector2 worldPoint)
         {
             if (isCleared || isGameOver) return false;
+            if (!GetPeepViewport(out var viewport) || !viewport.Contains(worldPoint)) return false;
 
             // 1. 단서 클릭 확인
             if (clues != null)

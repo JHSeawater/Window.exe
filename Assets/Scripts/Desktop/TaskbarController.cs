@@ -26,6 +26,7 @@ namespace WindowExe.Desktop
         public RectTransform Content => content;
         public bool Overflow { get; private set; }
         public string HighlightedWindowId => highlighted;
+        public ITaskbarWindowSource Source => source;
 
         public void Configure(MonoBehaviour provider, RectTransform view, RectTransform items,
             TaskbarButtonView prefab, Button left, Button right)

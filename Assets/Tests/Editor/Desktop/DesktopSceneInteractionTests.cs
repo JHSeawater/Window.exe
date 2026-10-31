@@ -135,7 +135,7 @@ namespace WindowExe.Desktop.Tests
                     var firstStart = first.Rect.localPosition;
                     var secondStart = second.Rect.localPosition;
                     var press = Center(first.Rect);
-                    Vector2 movement = new Vector2(220, -30);
+                    Vector2 movement = new Vector2(500, -30);
                     var target = press + ScreenPoint(desktop, movement) - ScreenPoint(desktop, Vector2.zero);
                     yield return Send(mouse, press, false);
                     yield return Send(mouse, press, true);

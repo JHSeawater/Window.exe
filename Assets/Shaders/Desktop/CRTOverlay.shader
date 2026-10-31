@@ -11,13 +11,13 @@ Shader "WindowExe/CRTOverlay"
         _ScanlineStrength ("Scanline Strength", Range(0, 1)) = 0.25
         _ScanlinePeriod ("Scanline Period (px @1080p)", Float) = 3
 
-        _GrainStrength ("Grain Strength", Range(0, 1)) = 0.08
+        _GrainStrength ("Grain Strength", Range(0, 1)) = 0.0035
 
         _StreakStrength ("Streak Strength", Range(0, 1)) = 0.35
         _StreakDensity ("Streak Density", Range(0, 0.3)) = 0.03
         _StreakSpeed ("Streak Change Speed", Float) = 10
 
-        _RollStrength ("Rolling Bar Strength", Range(0, 1)) = 0.05
+        _RollStrength ("Rolling Bar Strength", Range(0, 1)) = 0.000625
         _RollSpeed ("Rolling Bar Speed", Float) = 0.12
 
         _VignetteStrength ("Vignette Strength", Range(0, 1)) = 0.35

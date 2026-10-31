@@ -443,7 +443,7 @@ SpriteRenderer:
   m_SortingLayer: 3
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4fbbae5c8ced8af469323ab582a6032b, type: 3}
+  m_Sprite: {fileID: -1864171691153526656, guid: 92a98a5c00738d143859fb054f409dee, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1206,7 +1206,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.ImageWindow
   windowTitle: "\uC0AC\uC9C4"
   secondarySprite: {fileID: -1875805555762006269, guid: d94d18883666b482c98f9ce7bc4e5704, type: 3}
-  taskbarIcon: {fileID: 21300000, guid: 4fbbae5c8ced8af469323ab582a6032b, type: 3}
+  taskbarIcon: {fileID: -1864171691153526656, guid: 92a98a5c00738d143859fb054f409dee, type: 3}
   textFont: {fileID: 11400000, guid: b45be4372cbb7454cb608bfcf35607af, type: 2}
   showInTaskbar: 1
   canMinimize: 1
@@ -1219,7 +1219,7 @@ MonoBehaviour:
   borderThickness: 0.06
   borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
   borderSprite: {fileID: 0}
-  primarySprite: {fileID: 21300000, guid: 4fbbae5c8ced8af469323ab582a6032b, type: 3}
+  primarySprite: {fileID: -1864171691153526656, guid: 92a98a5c00738d143859fb054f409dee, type: 3}
 --- !u!1 &5010885082801826925
 GameObject:
   m_ObjectHideFlags: 0

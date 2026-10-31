@@ -15,6 +15,9 @@ namespace WindowExe.Desktop
         public Rect Bounds { get; private set; }
         public bool Valid { get; private set; }
         public event Action Changed;
+        public event Action<DesktopSpaceSnapshot> Changing;
+        public DesktopSpaceSnapshot Snapshot { get; private set; }
+        private int generation;
         private Matrix4x4 projection, cameraMatrix, canvasMatrix;
         private Rect lastArea, viewport;
         private float lastPlaneZ;
@@ -55,9 +58,12 @@ namespace WindowExe.Desktop
         private void Invalidate()
         {
             if(!Valid) return;
+            var invalid = new DesktopSpaceSnapshot(++generation, false, default, default, planeZ, Matrix4x4.identity, Matrix4x4.identity);
+            Changing?.Invoke(invalid);
             // Invalidate before rollback so it cannot constrain against obsolete bounds.
             Valid=false; Bounds=default;
-            DesktopInputRouter.Instance?.Cancel();
+            Snapshot=invalid;
+            DesktopInputRouter.Instance?.Cancel(DesktopCancelReason.SpaceChanged);
             Changed?.Invoke();
         }
         public void Refresh()
@@ -88,12 +94,15 @@ namespace WindowExe.Desktop
                 }
                 var bounds=Rect.MinMaxRect(min.x,min.y,max.x,max.y);
                 if(!Finite(bounds.width)||!Finite(bounds.height)||bounds.width<=0||bounds.height<=0) { Invalidate(); return; }
-                DesktopInputRouter.Instance?.Cancel();
+                var nextSnapshot = DesktopSpaceSnapshot.Capture(++generation, bounds, z, camera);
+                Changing?.Invoke(nextSnapshot);
+                DesktopInputRouter.Instance?.Cancel(DesktopCancelReason.SpaceChanged);
                 // Cancellation may invoke observers; never publish a mixed configuration.
                 if(!ConfigurationMatches(camera,area,windows,nextProjection,nextCamera,nextCanvas,local,pixels,z)) { Invalidate(); return; }
                 Bounds=bounds; projection=nextProjection; cameraMatrix=nextCamera; canvasMatrix=nextCanvas;
                 lastArea=local; viewport=pixels; lastPlaneZ=z;
                 lastCamera=camera; lastWorkArea=area; lastManager=windows; Valid=true;
+                Snapshot=nextSnapshot;
                 windows?.ConstrainAll(bounds);
                 Changed?.Invoke();
             }

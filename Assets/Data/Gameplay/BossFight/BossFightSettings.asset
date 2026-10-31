@@ -1,0 +1,135 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1ac2e39289f43248849905f2d92999f, type: 3}
+  m_Name: BossFightSettings
+  m_EditorClassIdentifier: WindowExe.BossFight::WindowExe.BossFight.BossFightSettings
+  randomSeed: 117
+  enableDebugControls: 1
+  crtBaseScanlineScale: 0.35
+  crtBaseStreakScale: 0.2
+  crtBaseStreakDensityScale: 0.25
+  phase2Window:
+    x: 105
+    y: 435
+    width: 300
+    height: 210
+  phase2Trash:
+    x: 180
+    y: 540
+  phase2Boss:
+    x: 1782
+    y: 525
+  downloadSeconds: 240
+  minimizeSeconds: 4.5
+  trashMargin: 39
+  trashGrabRadius: 42
+  bossGrabRadius: 51
+  captureInset: 30
+  dropRadius: 63
+  minWidth: 90
+  minHeight: 90
+  maxWidth: 600
+  maxHeight: 510
+  eyeInset: 3
+  titleHeight: 36
+  resizeBorder: 9
+  resizeOuterBorder: 24
+  wallWarningSeconds: 1.8
+  wallAttackPauseSeconds: 2.5
+  wallSpeed: 248
+  firstWallSpeed: 186
+  wallRadius: 27
+  wallSpacing: 51
+  aimedSpeed: 278
+  aimedRadius: 27
+  aimedMinimumDistance: 390
+  aimedHorizontalRange: 240
+  directRange: 570
+  directInterval: 3.5
+  scatterInterval: 1.1
+  aimedInterval: 0.45
+  scatterSwayInterval: 0.6
+  attackDurations:
+  - 2.2
+  - 4.5
+  - 1.6
+  - 0.9
+  - 2
+  - 3.5
+  - 1.8
+  trashSprite: {fileID: 21300000, guid: 6376478312c4c85468bb76d9e9182309, type: 3}
+  bossSprite: {fileID: 6053082128558569388, guid: 0c7f14bcf99094463867e8ebeda062a7, type: 3}
+  eyeSprite: {fileID: 21300000, guid: c83cffe0c5be93e42ab071ba55565e07, type: 3}
+  pupilSprite: {fileID: 5420077245570004842, guid: b4470fb3bb534034da64fc7ce4efc9a7, type: 3}
+  phase2PupilDiameterRatio: 0.55
+  phase2BackgroundSprite: {fileID: 21300000, guid: 6b2db8d1a60be3243902e6141c842e29, type: 3}
+  phase2EyeSizeVariation: 0.12
+  phase2FloatingEyes:
+  - center:
+      x: 790
+      y: 310
+    radius: 34
+  - center:
+      x: 1120
+      y: 720
+    radius: 30
+  - center:
+      x: 1450
+      y: 330
+    radius: 38
+  - center:
+      x: 960
+      y: 530
+    radius: 70
+  phase2SpacebarSprite: {fileID: 2678539659978713172, guid: 1feaa443a4616ab43b95ab39143b8d8d, type: 3}
+  phase1EyeSprite: {fileID: 21300000, guid: f179aee9bfc204354aaefa9ddb43351d, type: 3}
+  phase1PupilSprite: {fileID: 21300000, guid: 9c4e68483a52a4937ad22f44cff3633c, type: 3}
+  phase1HiddenBackgroundSprite: {fileID: 21300000, guid: 6b2db8d1a60be3243902e6141c842e29, type: 3}
+  phase1ErrorSprite: {fileID: -3139875151309784696, guid: d9a05737f6581d34fae05e1bffa63693, type: 3}
+  phase1IntroSprite: {fileID: -9206548735825025157, guid: 8cc23ff6c5467464c9440e58ff4c801f, type: 3}
+  phase1DownloadSprite: {fileID: 1523266362149686622, guid: 4dd786ece272fdc49bce679a650bbdab, type: 3}
+  phase1EntryEyeFrames:
+  - {fileID: 7354185740430724223, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -3098392244586271875, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -1980492072317427553, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -8461028044146273212, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: 239574089017221128, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -4665496049488023884, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -5357473543794518404, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -5091147797656996971, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: 3834721577859393455, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -4365007414641006300, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: 6976269938263413883, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -7744689946228490506, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  - {fileID: -1246369404234899340, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
+  phase1EntryFrameSeconds:
+  - 0.8
+  - 0.1
+  - 0.1
+  - 0.1
+  - 0.24
+  - 0.1
+  - 0.12
+  - 0.1
+  - 0.6
+  - 0.26
+  - 0.32
+  - 0.32
+  - 1.2
+  phase1EntryErrorSprite: {fileID: 2160335949537737053, guid: 7c31752a32b15584088be4ffe83f91f2, type: 3}
+  phaseTransitionDosSprite: {fileID: 21300000, guid: 998d2af21b91f094081b7bf239bb00c7, type: 3}
+  phase1: {fileID: 11400000, guid: a80c4bc11b6bae54ea22e445ca9d6355, type: 2}
+  hiddenViewShader: {fileID: 4800000, guid: 9ba48741ac3db8a4fa9f92bfcd0cf54e, type: 3}
+  hiddenLayer: 8
+  hiddenRendererIndex: 1
+  phase2Background: {r: 0.23, g: 0.025, b: 0.045, a: 1}
+  safeDesktop: {r: 0.025, g: 0.18, b: 0.42, a: 1}

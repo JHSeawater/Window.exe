@@ -510,23 +510,8 @@ namespace WindowExe.Desktop
                 return;
 
             // 필수 영상 연결 확인
-            if (
-                introVideoPlayer == null ||
-                introVideoClip == null ||
-                introVideoScreen == null ||
-                introRenderTexture == null
-            )
-            {
-                Debug.LogError(
-                    "[StartScreenController] " +
-                    "영상 연결이 누락되었습니다. " +
-                    "VideoPlayer, VideoClip, RawImage, " +
-                    "RenderTexture를 확인하세요.",
-                    this
-                );
-
-                return;
-            }
+            bool hasIntro = introVideoPlayer != null && introVideoClip != null &&
+                introVideoScreen != null && introRenderTexture != null;
 
             if (string.IsNullOrWhiteSpace(nextSceneName))
             {
@@ -579,6 +564,13 @@ namespace WindowExe.Desktop
             }
 
             // 영상 시작
+            if (!hasIntro)
+            {
+                Debug.LogWarning("[StartScreenController] Intro assets unavailable; loading " + nextSceneName + ".", this);
+                LoadNextScene();
+                return;
+            }
+
             introCoroutine =
                 StartCoroutine(PlayIntroSequence());
         }
@@ -675,6 +667,11 @@ namespace WindowExe.Desktop
 
         private void OnVideoFinished(
             VideoPlayer player)
+        {
+            LoadNextScene();
+        }
+
+        private void LoadNextScene()
         {
             if (!isTransitioning ||
                 sceneLoadStarted)
