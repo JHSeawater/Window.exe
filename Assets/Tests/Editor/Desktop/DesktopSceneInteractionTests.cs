@@ -19,8 +19,12 @@ using W = WindowExe.Desktop.Desktop.Window.Window;
 
 namespace WindowExe.Desktop.Tests
 {
+    [TestFixture(CRTQuality.Full)]
+    [TestFixture(CRTQuality.Off)]
     public sealed partial class DesktopSceneInteractionTests
     {
+        private readonly CRTQuality crtQuality;
+        public DesktopSceneInteractionTests(CRTQuality quality) { crtQuality = quality; }
         private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
         private EditorWindow gameView;
         private PropertyInfo sizeIndex;
@@ -38,6 +42,8 @@ namespace WindowExe.Desktop.Tests
             EditorSceneManager.OpenScene("Assets/Scenes/Desktop.unity");
             yield return new EnterPlayMode();
             inputScope = new DesktopInputTestScope();
+            Assert.That(CRTOverlay.Instance, Is.Not.Null);
+            CRTOverlay.Instance.SetQuality(crtQuality);
             var assembly = typeof(Editor).Assembly;
             var viewType = assembly.GetType("UnityEditor.GameView");
             gameView = EditorWindow.GetWindow(viewType);
@@ -561,6 +567,9 @@ namespace WindowExe.Desktop.Tests
         [UnityTest]
         public IEnumerator CoalescedReleaseAndAdapterDisablePreserveWindowState()
         {
+            // This case assumes no viewport cancellation during the coalesced event pair.
+            SetResolution(1280,720);
+            for(var frame=0;frame<4;frame++) yield return null;
             var manager=WindowManager.Instance; var w=manager.Open("memo");
             var source=Object.FindAnyObjectByType<WindowTaskbarSource>(); var bar=Object.FindAnyObjectByType<TaskbarController>();
             var id=manager.GetProcess("memo").InstanceId;
@@ -581,7 +590,7 @@ namespace WindowExe.Desktop.Tests
                 InputSystem.QueueStateEvent(mouse,new MouseState{position=title}.WithButton(MouseButton.Left,true));
                 InputSystem.QueueStateEvent(mouse,new MouseState{position=title+new Vector2(70,-20)});
                 yield return null; yield return null;
-                Assert.That(Vector2.Distance(w.transform.position,before),Is.GreaterThan(.1),"Press coordinates must survive a down/up pair processed in one update.");
+                Assert.That(Vector2.Distance(w.transform.position,before),Is.GreaterThan(.1),"Press coordinates must survive a down/up pair processed in one update. "+Diagnostic());
                 Object.Destroy(manager.gameObject); yield return null; yield return null;
                 Assert.That(bar.Buttons,Is.Empty,"Destroying the provider must clear its displayed buttons.");
             }

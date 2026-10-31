@@ -80,6 +80,7 @@ namespace WindowExe.Desktop.Editor
             foreach(var orphan in UnityEngine.Object.FindObjectsByType<W>(FindObjectsInactive.Include,FindObjectsSortMode.None))
                 if(orphan.gameObject.scene==scene&&orphan.transform.parent!=root.transform) UnityEngine.Object.DestroyImmediate(orphan.gameObject);
             Canvas.ForceUpdateCanvases(); space.Refresh(); desktop.EnsureValidLayout();
+            CRTOverlayBuilder.Install(scene);
         }
         private static void EnsureTypography(TMP_FontAsset font)
         {
