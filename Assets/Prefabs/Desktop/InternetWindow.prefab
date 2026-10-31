@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8265889029951226210}
   - component: {fileID: -8599348681930744718}
+  - component: {fileID: 6409535793845256470}
   m_Layer: 0
   m_Name: InternetWindow
   m_TagString: Untagged
@@ -45,7 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.InternetWindow
   windowTitle: "\uC778\uD130\uB137"
-  secondarySprite: {fileID: 6001568132130595043, guid: 2c759fdd88d0ecb4cb37427abf73f3ca, type: 3}
+  secondarySprite: {fileID: 21300000, guid: 24eaaf16b2b8af941a886d9e6cd33f89, type: 3}
   taskbarIcon: {fileID: 0}
   textFont: {fileID: 11400000, guid: 175ebe806d595564f84dc956fb376780, type: 2}
   showInTaskbar: 1
@@ -69,3 +70,19 @@ MonoBehaviour:
   requiredOverlapWidth: 0.3
   requiredOverlapHeight: 0.15
   koreanFont: {fileID: 0}
+--- !u!114 &6409535793845256470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3216710494131901329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 594884dd42742f3408cebfffb3ca8f29, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.InternetSecondaryReveal
+  secondaryImage: {fileID: 21300000, guid: 24eaaf16b2b8af941a886d9e6cd33f89, type: 3}
+  windowExeId: WINDOW.exe
+  gunFileId: gun-file
+  onlyWhenDropdownOpen: 1
