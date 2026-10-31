@@ -120,6 +120,65 @@ namespace WindowExe.Desktop.Tests
 
             Object.DestroyImmediate(slowGo);
         }
+
+        [Test]
+        public void MicroJitterProducesObservableDisplacement()
+        {
+            // Twitch 모드 검증
+            eyeTracker.AddMicroJitter = true;
+            eyeTracker.JitterType = EyeJitterType.Twitch;
+            eyeTracker.JitterAmount = 0.05f;
+            eyeTracker.JitterSpeed = 40f;
+            eyeTracker.OverrideHasTarget = false; // 정면 응시 상태에서도 지터링 동작
+
+            var hadDifference = false;
+            for (var i = 1; i <= 10; i++)
+            {
+                eyeTracker.ManualTick(0.05f);
+                var diff = Vector2.Distance(eyeTracker.CurrentLocalPos, eyeTracker.CurrentBasePos);
+                if (diff > 0.001f)
+                {
+                    hadDifference = true;
+                    break;
+                }
+            }
+
+            Assert.IsTrue(hadDifference, "Twitch micro jitter should produce non-zero offset on the pupil position.");
+
+            // Smooth 모드 검증
+            eyeTracker.JitterType = EyeJitterType.Smooth;
+            var hadSmoothDiff = false;
+            for (var i = 1; i <= 10; i++)
+            {
+                eyeTracker.ManualTick(0.05f);
+                var diff = Vector2.Distance(eyeTracker.CurrentLocalPos, eyeTracker.CurrentBasePos);
+                if (diff > 0.001f)
+                {
+                    hadSmoothDiff = true;
+                    break;
+                }
+            }
+
+            Assert.IsTrue(hadSmoothDiff, "Smooth micro jitter should also produce non-zero offset on the pupil position.");
+        }
+
+        [Test]
+        public void ExtremeJitterAmountDoesNotClipOrEscapeMaxRadius()
+        {
+            // 사용자가 인스펙터에서 1.0f나 4.44f 등의 큰 값을 넣더라도 maxRadius를 절대 벗어나지 않는지 검증
+            eyeTracker.AddMicroJitter = true;
+            eyeTracker.JitterAmount = 5.0f; // 극단적인 수치
+            eyeTracker.MaxRadius = 0.2f;
+            eyeTracker.OverrideHasTarget = true;
+            eyeTracker.OverrideTargetPosition = new Vector2(10f, 10f); // 타깃 방향으로 최대 이동
+
+            for (var i = 1; i <= 30; i++)
+            {
+                eyeTracker.ManualTick(0.05f);
+                var currentDist = Vector2.Distance(eyeTracker.CurrentLocalPos, eyeTracker.CenterLocalPosition);
+                Assert.LessOrEqual(currentDist, eyeTracker.MaxRadius + 0.001f, "Even with extreme jitter, pupil must not exceed maxRadius.");
+            }
+        }
     }
 }
 

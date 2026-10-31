@@ -12,7 +12,7 @@ namespace WindowExe.Desktop
     {
         public static WifiConnection Instance { get; private set; }
 
-        [SerializeField] private bool isConnected = true;
+        [SerializeField] private bool isConnected = false;
         public bool IsConnected => isConnected;
         public event Action<bool> ConnectionChanged;
 

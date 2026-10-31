@@ -1464,7 +1464,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79d7dbbff55cd4d44ba47918eadb6658, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.WifiConnection
-  isConnected: 1
+  isConnected: 0
 --- !u!4 &1158675612
 Transform:
   m_ObjectHideFlags: 0

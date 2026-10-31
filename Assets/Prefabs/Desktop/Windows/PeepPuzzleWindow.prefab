@@ -210,7 +210,7 @@ Transform:
   m_GameObject: {fileID: 165839492865197751}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalPosition: {x: -0.52, y: 2.48, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -271,7 +271,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 2, y: 2}
+  m_Size: {x: 3, y: 3}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -316,7 +316,7 @@ BoxCollider2D:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
     oldSize: {x: 15.36, y: 10.24}
-    newSize: {x: 2, y: 2}
+    newSize: {x: 3, y: 3}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
@@ -363,8 +363,9 @@ MonoBehaviour:
   returnSpeed: 5
   centerLocalPosition: {x: 0, y: 0}
   addMicroJitter: 1
-  jitterAmount: 0.015
-  jitterSpeed: 20
+  jitterOnlyWhenTarget: 0
+  jitterAmount: 0.035
+  jitterSpeed: 25
 --- !u!1 &430230059516071142
 GameObject:
   m_ObjectHideFlags: 0
@@ -391,7 +392,7 @@ Transform:
   m_GameObject: {fileID: 430230059516071142}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.4, y: 0, z: 0}
+  m_LocalPosition: {x: 0.123, y: 0.063, z: 0}
   m_LocalScale: {x: 1.625, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -451,7 +452,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1.2, y: 1.2}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -485,7 +486,7 @@ Transform:
   m_GameObject: {fileID: 596094148156035948}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1, y: -0.6, z: 0}
+  m_LocalPosition: {x: -4.76, y: -2.8, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -540,15 +541,15 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 0.9, g: 0.8, b: 0.2, a: 0.7}
+  m_Sprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!61 &7275725786064247259
@@ -589,13 +590,13 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 0.6, y: 0.6}
+    oldSize: {x: 5.45, y: 5.63}
+    newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &4635012390932872491
 MonoBehaviour:
@@ -610,11 +611,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
   objectType: 0
-  defaultSprite: {fileID: 0}
-  activeSprite: {fileID: 0}
-  completedSprite: {fileID: 0}
+  defaultSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  activeSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
+  completedSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
   clickSound: {fileID: 0}
-  fallbackSize: {x: 0.6, y: 0.6}
+  fallbackSize: {x: 1, y: 1}
   onClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -701,15 +702,15 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 0.2, g: 0.9, b: 0.3, a: 0.7}
+  m_Sprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  m_Color: {r: 0, g: 1, b: 0.08398163, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!61 &4164312226735197864
@@ -750,13 +751,13 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 0.6, y: 0.6}
+    oldSize: {x: 5.45, y: 5.63}
+    newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &7480412033042157865
 MonoBehaviour:
@@ -771,11 +772,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
   objectType: 3
-  defaultSprite: {fileID: 0}
-  activeSprite: {fileID: 0}
-  completedSprite: {fileID: 0}
+  defaultSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  activeSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  completedSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
   clickSound: {fileID: 0}
-  fallbackSize: {x: 0.6, y: 0.6}
+  fallbackSize: {x: 1, y: 1}
   onClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -1136,7 +1137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8813928444977796990
 Transform:
   m_ObjectHideFlags: 0
@@ -1341,6 +1342,7 @@ GameObject:
   - component: {fileID: 1513177641676564636}
   - component: {fileID: 887960544849640267}
   - component: {fileID: 6439964458866655025}
+  - component: {fileID: 213546425052812721}
   m_Layer: 0
   m_Name: Watcher
   m_TagString: Untagged
@@ -1357,10 +1359,11 @@ Transform:
   m_GameObject: {fileID: 3962062941279241626}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.8, y: -1, z: 0}
+  m_LocalPosition: {x: -0.39, y: -2.87, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 6402110017757245665}
   m_Father: {fileID: 6176201769861446508}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1513177641676564636
@@ -1412,15 +1415,15 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 0.2, g: 0.6, b: 0.9, a: 0.7}
+  m_Sprite: {fileID: 21300000, guid: f179aee9bfc204354aaefa9ddb43351d, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 3, y: 3}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!61 &887960544849640267
@@ -1461,8 +1464,8 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 0.6, y: 0.6}
+    oldSize: {x: 15.36, y: 10.24}
+    newSize: {x: 3, y: 3}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
@@ -1490,6 +1493,28 @@ MonoBehaviour:
   onClicked:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &213546425052812721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3962062941279241626}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a40f1bf2480040218a0d5ffcfd1a160, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.EyeTracker
+  targetWindowId: window
+  pupilTransform: {fileID: 6402110017757245665}
+  maxRadius: 0.2
+  trackSpeed: 8
+  returnSpeed: 5
+  centerLocalPosition: {x: 0, y: 0}
+  addMicroJitter: 1
+  jitterOnlyWhenTarget: 0
+  jitterAmount: 0.035
+  jitterSpeed: 25
 --- !u!1 &4002140118665174570
 GameObject:
   m_ObjectHideFlags: 0
@@ -1763,6 +1788,98 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 2965242889504527058}
   m_maskType: 0
+--- !u!1 &4730943703809516990
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6402110017757245665}
+  - component: {fileID: 5852914930602305170}
+  m_Layer: 0
+  m_Name: KakaoTalk_Photo_2026-10-31-11-12-15_0 (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6402110017757245665
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4730943703809516990}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.13, y: -0.04, z: 0}
+  m_LocalScale: {x: 1.625, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1548088531666050566}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &5852914930602305170
+SpriteRenderer:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4730943703809516990}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: -941704759
+  m_SortingLayer: 2
+  m_SortingOrder: 25565
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 21300000, guid: ccc2396cfedee4bdeb5246195d107aef, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 1
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
 --- !u!1 &4738590914713455122
 GameObject:
   m_ObjectHideFlags: 0
@@ -2340,7 +2457,7 @@ Transform:
   m_GameObject: {fileID: 6661865316236604236}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.6, y: -0.7, z: 0}
+  m_LocalPosition: {x: 4.79, y: -2.93, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2395,15 +2512,15 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 0.9, g: 0.8, b: 0.2, a: 0.7}
+  m_Sprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!61 &3800377643434558609
@@ -2444,13 +2561,13 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 0.6, y: 0.6}
+    oldSize: {x: 5.45, y: 5.63}
+    newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &3028361526182651138
 MonoBehaviour:
@@ -2465,11 +2582,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
   objectType: 0
-  defaultSprite: {fileID: 0}
-  activeSprite: {fileID: 0}
-  completedSprite: {fileID: 0}
+  defaultSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  activeSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
+  completedSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
   clickSound: {fileID: 0}
-  fallbackSize: {x: 0.6, y: 0.6}
+  fallbackSize: {x: 1, y: 1}
   onClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -2600,7 +2717,7 @@ Transform:
   m_GameObject: {fileID: 7378974624580142184}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.5, y: 0.8, z: 0}
+  m_LocalPosition: {x: -6.11, y: 0.8, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2655,15 +2772,15 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 0.9, g: 0.8, b: 0.2, a: 0.7}
+  m_Sprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!61 &2752876176886337829
@@ -2704,13 +2821,13 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 0.6, y: 0.6}
+    oldSize: {x: 5.45, y: 5.63}
+    newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &4543934316186753434
 MonoBehaviour:
@@ -2725,11 +2842,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
   objectType: 0
-  defaultSprite: {fileID: 0}
-  activeSprite: {fileID: 0}
-  completedSprite: {fileID: 0}
+  defaultSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  activeSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
+  completedSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
   clickSound: {fileID: 0}
-  fallbackSize: {x: 0.6, y: 0.6}
+  fallbackSize: {x: 1, y: 1}
   onClicked:
     m_PersistentCalls:
       m_Calls: []
@@ -3269,7 +3386,7 @@ Transform:
   m_GameObject: {fileID: 8349363364208653983}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.2, y: 0.6, z: 0}
+  m_LocalPosition: {x: 4.3, y: 2.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3324,15 +3441,15 @@ SpriteRenderer:
   m_SortingLayer: 2
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 0}
-  m_Color: {r: 0.9, g: 0.8, b: 0.2, a: 0.7}
+  m_Sprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!61 &4184818530999289991
@@ -3373,13 +3490,13 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
-    newSize: {x: 0.6, y: 0.6}
+    oldSize: {x: 5.45, y: 5.63}
+    newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.6, y: 0.6}
+  m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
 --- !u!114 &138538312585653221
 MonoBehaviour:
@@ -3394,11 +3511,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
   objectType: 0
-  defaultSprite: {fileID: 0}
-  activeSprite: {fileID: 0}
-  completedSprite: {fileID: 0}
+  defaultSprite: {fileID: 3288616515048307622, guid: 5d9173fb300ff454bb2f28a549ab2063, type: 3}
+  activeSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
+  completedSprite: {fileID: 8290207319012952462, guid: 10c46720067304f03b2fa40b0305e817, type: 3}
   clickSound: {fileID: 0}
-  fallbackSize: {x: 0.6, y: 0.6}
+  fallbackSize: {x: 1, y: 1}
   onClicked:
     m_PersistentCalls:
       m_Calls: []
