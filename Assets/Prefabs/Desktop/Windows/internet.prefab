@@ -812,7 +812,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.NotepadWindow
   windowTitle: "\uC778\uD130\uB137"
-  secondarySprite: {fileID: 0}
+  secondarySprite: {fileID: 21300000, guid: 3644c2c4f3d4446493500495de368c2e, type: 3}
   taskbarIcon: {fileID: 21300000, guid: 400a06b0075e66e40b3f76b2b5c6fd5b, type: 3}
   textFont: {fileID: 11400000, guid: b45be4372cbb7454cb608bfcf35607af, type: 2}
   showInTaskbar: 1

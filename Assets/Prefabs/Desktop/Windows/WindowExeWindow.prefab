@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2305850991905721710
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8530185479470036068}
+  - component: {fileID: 872445645725028065}
+  m_Layer: 0
+  m_Name: WindowExeWindow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8530185479470036068
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2305850991905721710}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6.19865, y: -2.74205, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &872445645725028065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2305850991905721710}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5add2e7f180aa4a85856afddebbe84e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.WindowExeWindow
+  windowTitle: WINDOW(1).exe
+  secondarySprite: {fileID: 0}
+  taskbarIcon: {fileID: 6053082128558569388, guid: 0c7f14bcf99094463867e8ebeda062a7, type: 3}
+  textFont: {fileID: 0}
+  showInTaskbar: 1
+  canMinimize: 1
+  isModal: 0
+  ownerWindowId: 
+  size: {x: 5.2, y: 3.4}
+  minSize: {x: 2.4, y: 1.2}
+  maxSize: {x: 20, y: 20}
+  viewportMaterial: {fileID: 2100000, guid: 8a026b30be3e24e1c8ddc53dd4afd860, type: 2}
+  fillSprite: {fileID: 0}
+  viewportColor: {r: 1, g: 1, b: 1, a: 1}

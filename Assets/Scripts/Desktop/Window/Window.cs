@@ -102,11 +102,11 @@ namespace WindowExe.Desktop.Desktop.Window
         }
         public virtual void RequestMinimize() => manager?.TryRequest(this, WindowAction.Minimize);
         public virtual void RequestMaximize() => manager?.TryRequest(this, WindowAction.Maximize);
-        public bool IsPointerOverResizeHandle(Vector2 point) => resizeHandle != null && resizeHandle.IsPointerOverAnyHandle(point);
+        public virtual bool IsPointerOverResizeHandle(Vector2 point) => resizeHandle != null && resizeHandle.IsPointerOverAnyHandle(point);
         public int ButtonAt(Vector2 point) => titleBar != null ? titleBar.ButtonAt(point) : -1;
         public bool TitleContains(Vector2 point) => titleBar != null && titleBar.Contains(point);
         public bool Hit(Vector2 point) => OuterBounds.Contains(point) || IsPointerOverResizeHandle(point);
-        public ResizeDirection? ResizeAt(Vector2 point) => resizeHandle != null ? resizeHandle.DirectionAt(point) : null;
+        public virtual ResizeDirection? ResizeAt(Vector2 point) => resizeHandle != null ? resizeHandle.DirectionAt(point) : null;
         public virtual void MoveTo(Vector2 position)
         {
             if (IsMaximized) return;
@@ -214,14 +214,18 @@ namespace WindowExe.Desktop.Desktop.Window
             p.y = Mathf.Clamp(p.y, bounds.yMin + clippedSize.y / 2, bounds.yMax - clippedSize.y / 2 - BarHeight);
             ApplyDisplayGeometry(p,clippedSize);
         }
-        public void ApplySorting(int order)
+        public virtual void ApplySorting(int order)
         {
             foreach (var renderer in GetComponentsInChildren<Renderer>(true))
             {
-                var back = renderer.transform == secondary?.transform;
-                renderer.sortingLayerName = back ? SecondarySortingLayerName : PrimarySortingLayerName;
-                var offset = renderer.GetComponentInParent<WindowTitleBar>() != null ? (renderer is SpriteRenderer ? 10 : 11) : (renderer is SpriteRenderer && renderer.name!="Image" ? 0 : 1);
-                renderer.sortingOrder = order + (back ? 0 : offset);
+                var isSecondary = secondary != null && renderer.transform.IsChildOf(secondary.transform);
+                renderer.sortingLayerName = isSecondary ? SecondarySortingLayerName : PrimarySortingLayerName;
+                var offset = isSecondary
+                    ? (renderer.transform == secondary.transform ? 0 : 1)
+                    : (renderer.GetComponentInParent<WindowTitleBar>() != null
+                        ? (renderer is SpriteRenderer ? 10 : 11)
+                        : (renderer is SpriteRenderer && renderer.name != "Image" ? 0 : 1));
+                renderer.sortingOrder = order + offset;
             }
         }
         protected virtual void ApplySize(Vector2 value)

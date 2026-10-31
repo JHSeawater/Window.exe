@@ -1205,7 +1205,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.ImageWindow
   windowTitle: "\uC0AC\uC9C4"
-  secondarySprite: {fileID: 0}
+  secondarySprite: {fileID: -1875805555762006269, guid: d94d18883666b482c98f9ce7bc4e5704, type: 3}
   taskbarIcon: {fileID: 21300000, guid: 4fbbae5c8ced8af469323ab582a6032b, type: 3}
   textFont: {fileID: 11400000, guid: b45be4372cbb7454cb608bfcf35607af, type: 2}
   showInTaskbar: 1
