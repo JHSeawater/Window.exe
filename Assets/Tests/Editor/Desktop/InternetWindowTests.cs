@@ -18,6 +18,8 @@ namespace WindowExe.Desktop.Tests
         [SetUp]
         public void SetUp()
         {
+            InternetWindow.ResetPasswordState();
+
             wifiGo = new GameObject("WifiConnection");
             wifi = wifiGo.AddComponent<WifiConnection>();
             WifiConnection.ResetInstance(wifi);
@@ -41,11 +43,15 @@ namespace WindowExe.Desktop.Tests
             internet = manager.Open("internet") as InternetWindow;
             Assert.IsNotNull(internet);
             internet.SetWifi(wifi);
+
+            // 기본 Setup에서는 1단계 잠금을 해제해두어 하노이/검색/총 기존 테스트들의 연속성 유지
+            internet.SimulatePasscodeInput("1971");
         }
 
         [TearDown]
         public void TearDown()
         {
+            InternetWindow.ResetPasswordState();
             WifiConnection.ResetInstance(null);
 
             if (manager != null)
@@ -493,6 +499,112 @@ namespace WindowExe.Desktop.Tests
                 Object.DestroyImmediate(spriteKey);
                 Object.DestroyImmediate(texKey);
             }
+        }
+
+        [Test]
+        public void StartsInStep1LockScreenWithMaskAndWindowBackDots()
+        {
+            InternetWindow.ResetPasswordState();
+            manager.Close("internet");
+            var freshInternet = manager.Open("internet") as InternetWindow;
+            Assert.IsNotNull(freshInternet);
+
+            Assert.IsFalse(InternetWindow.IsPasswordUnlocked);
+            Assert.AreEqual(InternetWindow.InternetStep.LockScreen, freshInternet.CurrentStep);
+            Assert.AreEqual(string.Empty, freshInternet.CurrentPasscodeInput);
+
+            // WindowBack 투시 동그라미 4개 검증 (정답 1971의 크기 대소 관계: 1 < 7 < 9)
+            // 0번('1'): 엄청 작음, 1번('9'): 엄청 큼, 2번('7'): 조금 큼, 3번('1'): 엄청 작음
+            Vector2 dot0 = freshInternet.GetPasscodeDotSize(0);
+            Vector2 dot1 = freshInternet.GetPasscodeDotSize(1);
+            Vector2 dot2 = freshInternet.GetPasscodeDotSize(2);
+            Vector2 dot3 = freshInternet.GetPasscodeDotSize(3);
+
+            // 1번(9) > 2번(7) > 0번(1)
+            Assert.Greater(dot1.x, dot2.x);
+            Assert.Greater(dot2.x, dot0.x);
+            // 0번(1) == 3번(1)
+            Assert.AreEqual(dot0.x, dot3.x, 0.0001f);
+
+            // 색상은 모두 검은색
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(Color.black, freshInternet.GetPasscodeDotColor(i));
+            }
+        }
+
+        [Test]
+        public void IncorrectPasscodeClearsInputAndShowsErrorMessage()
+        {
+            InternetWindow.ResetPasswordState();
+            manager.Close("internet");
+            var freshInternet = manager.Open("internet") as InternetWindow;
+            Assert.IsNotNull(freshInternet);
+
+            int soundCount = freshInternet.SoundPlayCount;
+
+            // 오답 4자리 입력
+            freshInternet.InputPasscodeDigit('1');
+            freshInternet.InputPasscodeDigit('2');
+            freshInternet.InputPasscodeDigit('3');
+            freshInternet.InputPasscodeDigit('4');
+
+            // 4자리 입력 즉시 검증되어 실패
+            Assert.IsFalse(InternetWindow.IsPasswordUnlocked);
+            Assert.AreEqual(InternetWindow.InternetStep.LockScreen, freshInternet.CurrentStep);
+            // 입력칸 자동 비워짐
+            Assert.AreEqual(string.Empty, freshInternet.CurrentPasscodeInput);
+            // 에러 문구 표시 중
+            Assert.IsTrue(freshInternet.IsPasscodeErrorShowing);
+            Assert.Greater(freshInternet.SoundPlayCount, soundCount);
+        }
+
+        [Test]
+        public void CorrectPasscodeTransitionsToNetworkPuzzleAndPersistsAcrossReopen()
+        {
+            InternetWindow.ResetPasswordState();
+            manager.Close("internet");
+            var freshInternet = manager.Open("internet") as InternetWindow;
+            Assert.IsNotNull(freshInternet);
+
+            // 정답 '1971' 입력
+            freshInternet.SimulatePasscodeInput("1971");
+
+            // 1단계 잠금 해제 -> 2단계 네트워크 퍼즐(오프라인 시)로 전환
+            Assert.IsTrue(InternetWindow.IsPasswordUnlocked);
+            Assert.AreEqual(InternetWindow.InternetStep.NetworkPuzzle, freshInternet.CurrentStep);
+
+            // 창을 닫고 다시 열어도 잠금 해제 유지
+            manager.Close("internet");
+            var reopenedInternet = manager.Open("internet") as InternetWindow;
+            Assert.IsNotNull(reopenedInternet);
+
+            Assert.IsTrue(InternetWindow.IsPasswordUnlocked);
+            Assert.AreEqual(InternetWindow.InternetStep.NetworkPuzzle, reopenedInternet.CurrentStep);
+        }
+
+        [Test]
+        public void KeypadButtonsCanInputAndClearDigits()
+        {
+            InternetWindow.ResetPasswordState();
+            manager.Close("internet");
+            var freshInternet = manager.Open("internet") as InternetWindow;
+            Assert.IsNotNull(freshInternet);
+
+            // 키패드 '1' 버튼 클릭
+            Rect btn1Rect = freshInternet.GetKeypadButtonWorldRect(0); // "1"
+            freshInternet.PointerLeftPressed(btn1Rect.center);
+            Assert.AreEqual("1", freshInternet.CurrentPasscodeInput);
+
+            // 키패드 '9' 버튼 클릭 (index 8)
+            Rect btn9Rect = freshInternet.GetKeypadButtonWorldRect(8); // "9"
+            freshInternet.PointerLeftPressed(btn9Rect.center);
+            Assert.AreEqual("19", freshInternet.CurrentPasscodeInput);
+
+            // 키패드 'C' 버튼 클릭 (index 9) -> 클리어
+            Rect btnCRect = freshInternet.GetKeypadButtonWorldRect(9); // "C"
+            freshInternet.PointerLeftPressed(btnCRect.center);
+            Assert.AreEqual(string.Empty, freshInternet.CurrentPasscodeInput);
         }
     }
 }

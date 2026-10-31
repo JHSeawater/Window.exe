@@ -8,6 +8,15 @@ namespace WindowExe.Desktop.Desktop.Window
 {
     public sealed class InternetWindow : Window
     {
+        public enum InternetStep
+        {
+            LockScreen,     // 1단계: 4자리 암호 잠금 화면
+            NetworkPuzzle,  // 2단계: 와이파이 하노이 탑 네트워크 퍼즐
+            SearchHistory,  // 3단계: 검색 기록 화면
+            Result404,      // 4단계: 404 결과 화면
+            ResultGun       // 4단계: 총 결과 화면
+        }
+
         public enum InternetPhase
         {
             NetworkPuzzle,
@@ -28,6 +37,11 @@ namespace WindowExe.Desktop.Desktop.Window
 
         public const int HanoiPegCount = 3;
         public const int HanoiDiskCount = 3;
+
+        [Header("Step 1 - Passcode Lock")]
+        [SerializeField] private string passcode = "1971";
+        [SerializeField] private float errorMessageDuration = 1.8f;
+        [SerializeField] private Color passcodeDotColor = Color.black;
 
         [Header("Wi-Fi")]
         [SerializeField] private global::WindowExe.Desktop.WifiConnection wifi;
@@ -103,6 +117,7 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private TMP_FontAsset koreanFont;
 
         private static Sprite whitePixel;
+        private static Sprite circleSprite;
         private static AudioClip fallbackSelectClip;
         private static AudioClip fallbackMoveClip;
         private static AudioClip fallbackErrorClip;
@@ -110,9 +125,62 @@ namespace WindowExe.Desktop.Desktop.Window
         private static AudioClip fallbackGunShotClip;
         private static AudioClip fallbackGunRicochetClip;
 
+        // Step 1 - 비밀번호 잠금 전역 유지 상태
+        private static bool isPasswordUnlocked = false;
+
+        public static bool IsPasswordUnlocked
+        {
+            get => isPasswordUnlocked;
+            set => isPasswordUnlocked = value;
+        }
+
+        public static void ResetPasswordState()
+        {
+            isPasswordUnlocked = false;
+        }
+
+        // 정답 1971에 맞춘 WindowBack 투시 동그라미 직경 (1: 엄청작음, 9: 엄청큼, 7: 조금큼, 1: 엄청작음)
+        private static readonly float[] PasscodeDotDiameters = { 0.10f, 0.44f, 0.26f, 0.10f };
+
+        public const int KeypadButtonCount = 11;
+        private static readonly string[] KeypadLabels = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0" };
+
         private Transform contentRoot;
         private Transform backContentRoot;
         private WindowTitleBar ieTitleBar;
+
+        // Step 1 암호 잠금 화면 - WindowFront & WindowBack
+        private SpriteRenderer lockDialogBorderFront;
+        private SpriteRenderer lockDialogFillFront;
+        private SpriteRenderer lockDialogBorderBack;
+        private SpriteRenderer lockDialogFillBack;
+
+        private SpriteRenderer lockInputBorderFront;
+        private SpriteRenderer lockInputFillFront;
+        private SpriteRenderer lockInputBorderBack;
+        private SpriteRenderer lockInputFillBack;
+
+        private readonly SpriteRenderer[] passcodeBackDots = new SpriteRenderer[4];
+
+        private readonly SpriteRenderer[] keypadButtonBordersFront = new SpriteRenderer[KeypadButtonCount];
+        private readonly SpriteRenderer[] keypadButtonFillsFront = new SpriteRenderer[KeypadButtonCount];
+        private readonly SpriteRenderer[] keypadButtonBordersBack = new SpriteRenderer[KeypadButtonCount];
+        private readonly SpriteRenderer[] keypadButtonFillsBack = new SpriteRenderer[KeypadButtonCount];
+        private readonly TextMeshPro[] keypadButtonLabelsFront = new TextMeshPro[KeypadButtonCount];
+        private readonly TextMeshPro[] keypadButtonLabelsBack = new TextMeshPro[KeypadButtonCount];
+        private readonly Rect[] keypadButtonRects = new Rect[KeypadButtonCount];
+
+        private TextMeshPro lockTitleLabel;
+        private TextMeshPro backLockTitleLabel;
+        private TextMeshPro lockGuideLabel;
+        private TextMeshPro backLockGuideLabel;
+        private TextMeshPro lockErrorLabel;
+        private TextMeshPro backLockErrorLabel;
+        private TextMeshPro lockInputMaskLabel;
+        private TextMeshPro backLockInputMaskLabel;
+
+        private string currentPasscodeInput = "";
+        private float errorMessageTimer = 0f;
 
         // WindowFront / WindowBack 렌더러
         private SpriteRenderer artwork;
@@ -218,11 +286,28 @@ namespace WindowExe.Desktop.Desktop.Window
         public Vector2 LastTracerEnd { get; private set; }
         public Vector2? LastRicochetEnd { get; private set; }
         public bool RequireMuzzleInWindowExeToShoot { get => requireMuzzleInWindowExeToShoot; set => requireMuzzleInWindowExeToShoot = value; }
+
+        public string Passcode { get => passcode; set => passcode = value; }
+        public string CurrentPasscodeInput => currentPasscodeInput;
+        public bool IsPasscodeErrorShowing => errorMessageTimer > 0f;
+
+        public InternetStep CurrentStep
+        {
+            get
+            {
+                if (!IsPasswordUnlocked) return InternetStep.LockScreen;
+                if (!IsOnline) return InternetStep.NetworkPuzzle;
+                if (phase3Result == InternetPhase.Result404) return InternetStep.Result404;
+                if (phase3Result == InternetPhase.ResultGun) return InternetStep.ResultGun;
+                return InternetStep.SearchHistory;
+            }
+        }
+
         public InternetPhase CurrentPhase
         {
             get
             {
-                if (!IsOnline) return InternetPhase.NetworkPuzzle;
+                if (!IsPasswordUnlocked || !IsOnline) return InternetPhase.NetworkPuzzle;
                 if (phase3Result == InternetPhase.Result404 || phase3Result == InternetPhase.ResultGun)
                     return phase3Result;
                 return InternetPhase.SearchHistory;
@@ -716,6 +801,141 @@ namespace WindowExe.Desktop.Desktop.Window
                     PrimarySortingLayerName
                 );
 
+                // Step 1: 잠금 화면 UI - WindowFront & WindowBack
+                Color dialogBorderColor = new Color(0.35f, 0.35f, 0.35f);
+                Color dialogFillColor = new Color(0.86f, 0.87f, 0.90f);
+                lockDialogBorderFront = CreatePanel(contentRoot, "IE_LockDialogBorderFront", dialogBorderColor, PrimarySortingLayerName);
+                lockDialogFillFront = CreatePanel(contentRoot, "IE_LockDialogFillFront", dialogFillColor, PrimarySortingLayerName);
+                lockDialogBorderBack = CreatePanel(backContentRoot, "IE_LockDialogBorderBack", dialogBorderColor, SecondarySortingLayerName);
+                lockDialogFillBack = CreatePanel(backContentRoot, "IE_LockDialogFillBack", dialogFillColor, SecondarySortingLayerName);
+
+                Color inputBorderColor = new Color(0.30f, 0.30f, 0.30f);
+                Color inputFillColor = Color.white;
+                lockInputBorderFront = CreatePanel(contentRoot, "IE_LockInputBorderFront", inputBorderColor, PrimarySortingLayerName);
+                lockInputFillFront = CreatePanel(contentRoot, "IE_LockInputFillFront", inputFillColor, PrimarySortingLayerName);
+                lockInputBorderBack = CreatePanel(backContentRoot, "IE_LockInputBorderBack", inputBorderColor, SecondarySortingLayerName);
+                lockInputFillBack = CreatePanel(backContentRoot, "IE_LockInputFillBack", inputFillColor, SecondarySortingLayerName);
+
+                // WindowBack 투시용 4자리 동그라미 (스프라이트는 CircleSprite(), 색상은 검은색)
+                for (int d = 0; d < 4; d++)
+                {
+                    passcodeBackDots[d] = CreatePanel(backContentRoot, "IE_PasscodeBackDot_" + d, passcodeDotColor, SecondarySortingLayerName);
+                    passcodeBackDots[d].sprite = CircleSprite();
+                }
+
+                // 온스크린 키패드 (11개 버튼) - WindowFront & WindowBack
+                Color keypadBorderColor = new Color(0.40f, 0.40f, 0.40f);
+                Color keypadFillColor = new Color(0.80f, 0.81f, 0.84f);
+                for (int b = 0; b < KeypadButtonCount; b++)
+                {
+                    keypadButtonBordersFront[b] = CreatePanel(contentRoot, "IE_KeypadBorderFront_" + b, keypadBorderColor, PrimarySortingLayerName);
+                    keypadButtonFillsFront[b] = CreatePanel(contentRoot, "IE_KeypadFillFront_" + b, keypadFillColor, PrimarySortingLayerName);
+                    keypadButtonBordersBack[b] = CreatePanel(backContentRoot, "IE_KeypadBorderBack_" + b, keypadBorderColor, SecondarySortingLayerName);
+                    keypadButtonFillsBack[b] = CreatePanel(backContentRoot, "IE_KeypadFillBack_" + b, keypadFillColor, SecondarySortingLayerName);
+
+                    keypadButtonLabelsFront[b] = CreateLabel(
+                        contentRoot,
+                        "IE_KeypadLabelFront_" + b,
+                        KeypadLabels[b],
+                        2.2f,
+                        new Color(0.15f, 0.15f, 0.15f),
+                        TextAlignmentOptions.Center,
+                        PrimarySortingLayerName
+                    );
+
+                    keypadButtonLabelsBack[b] = CreateLabel(
+                        backContentRoot,
+                        "IE_KeypadLabelBack_" + b,
+                        KeypadLabels[b],
+                        2.2f,
+                        new Color(0.15f, 0.15f, 0.15f),
+                        TextAlignmentOptions.Center,
+                        SecondarySortingLayerName
+                    );
+                }
+
+                // 잠금 화면 텍스트 라벨들
+                lockTitleLabel = CreateLabel(
+                    contentRoot,
+                    "IE_LockTitleFront",
+                    "네트워크 접속 암호",
+                    2.4f,
+                    new Color(0.12f, 0.12f, 0.12f),
+                    TextAlignmentOptions.Center,
+                    PrimarySortingLayerName
+                );
+
+                backLockTitleLabel = CreateLabel(
+                    backContentRoot,
+                    "IE_LockTitleBack",
+                    "네트워크 접속 암호",
+                    2.4f,
+                    new Color(0.12f, 0.12f, 0.12f),
+                    TextAlignmentOptions.Center,
+                    SecondarySortingLayerName
+                );
+
+                const string lockGuideText = "인터넷에 접속하려면 4자리 암호를 입력하십시오.";
+                lockGuideLabel = CreateLabel(
+                    contentRoot,
+                    "IE_LockGuideFront",
+                    lockGuideText,
+                    1.9f,
+                    new Color(0.25f, 0.25f, 0.25f),
+                    TextAlignmentOptions.Center,
+                    PrimarySortingLayerName
+                );
+
+                backLockGuideLabel = CreateLabel(
+                    backContentRoot,
+                    "IE_LockGuideBack",
+                    lockGuideText,
+                    1.9f,
+                    new Color(0.25f, 0.25f, 0.25f),
+                    TextAlignmentOptions.Center,
+                    SecondarySortingLayerName
+                );
+
+                lockErrorLabel = CreateLabel(
+                    contentRoot,
+                    "IE_LockErrorFront",
+                    "",
+                    1.9f,
+                    new Color(0.85f, 0.15f, 0.15f),
+                    TextAlignmentOptions.Center,
+                    PrimarySortingLayerName
+                );
+
+                backLockErrorLabel = CreateLabel(
+                    backContentRoot,
+                    "IE_LockErrorBack",
+                    "",
+                    1.9f,
+                    new Color(0.85f, 0.15f, 0.15f),
+                    TextAlignmentOptions.Center,
+                    SecondarySortingLayerName
+                );
+
+                lockInputMaskLabel = CreateLabel(
+                    contentRoot,
+                    "IE_LockInputMaskFront",
+                    "",
+                    2.6f,
+                    new Color(0.10f, 0.10f, 0.10f),
+                    TextAlignmentOptions.Center,
+                    PrimarySortingLayerName
+                );
+
+                backLockInputMaskLabel = CreateLabel(
+                    backContentRoot,
+                    "IE_LockInputMaskBack",
+                    "",
+                    2.6f,
+                    new Color(0.10f, 0.10f, 0.10f),
+                    TextAlignmentOptions.Center,
+                    SecondarySortingLayerName
+                );
+
                 ieTitleBar = GetComponentInChildren<WindowTitleBar>(true);
 
                 ApplyArtwork();
@@ -1014,6 +1234,89 @@ namespace WindowExe.Desktop.Desktop.Window
 
             // Phase 1: 네트워크 연결 하노이 탑 퍼즐 배치
             LayoutHanoiElements(width, fullHeight, top);
+
+            // Step 1: 암호 잠금 화면 UI 배치
+            LayoutLockElements(width, fullHeight, top);
+        }
+
+        private void LayoutLockElements(float width, float fullHeight, float top)
+        {
+            float dialogWidth = Mathf.Min(width * 0.62f, 4.2f);
+            float dialogHeight = Mathf.Min(fullHeight * 0.72f, 3.2f);
+            float dialogCenterY = top - fullHeight * 0.54f;
+
+            // 다이얼로그 테두리 및 채우기
+            PlaceSprite(lockDialogBorderFront, 0f, dialogCenterY, dialogWidth, dialogHeight);
+            PlaceSprite(lockDialogFillFront, 0f, dialogCenterY, dialogWidth - 0.04f, dialogHeight - 0.04f);
+            PlaceSprite(lockDialogBorderBack, 0f, dialogCenterY, dialogWidth, dialogHeight);
+            PlaceSprite(lockDialogFillBack, 0f, dialogCenterY, dialogWidth - 0.04f, dialogHeight - 0.04f);
+
+            // 타이틀 및 가이드 라벨
+            float titleY = dialogCenterY + dialogHeight * 0.38f;
+            PlaceText(lockTitleLabel, 0f, titleY, dialogWidth * 0.90f, dialogHeight * 0.12f);
+            PlaceText(backLockTitleLabel, 0f, titleY, dialogWidth * 0.90f, dialogHeight * 0.12f);
+
+            float guideY = dialogCenterY + dialogHeight * 0.27f;
+            PlaceText(lockGuideLabel, 0f, guideY, dialogWidth * 0.92f, dialogHeight * 0.10f);
+            PlaceText(backLockGuideLabel, 0f, guideY, dialogWidth * 0.92f, dialogHeight * 0.10f);
+
+            // 오답 에러 라벨 (비밀번호 입력칸 위쪽)
+            float errorY = dialogCenterY + dialogHeight * 0.16f;
+            PlaceText(lockErrorLabel, 0f, errorY, dialogWidth * 0.90f, dialogHeight * 0.09f);
+            PlaceText(backLockErrorLabel, 0f, errorY, dialogWidth * 0.90f, dialogHeight * 0.09f);
+
+            // 비밀번호 입력창 (테두리, 채우기, 마스크 텍스트)
+            float inputY = dialogCenterY + dialogHeight * 0.05f;
+            float inputWidth = dialogWidth * 0.58f;
+            float inputHeight = 0.44f;
+
+            PlaceSprite(lockInputBorderFront, 0f, inputY, inputWidth, inputHeight);
+            PlaceSprite(lockInputFillFront, 0f, inputY, inputWidth - 0.04f, inputHeight - 0.04f);
+            PlaceSprite(lockInputBorderBack, 0f, inputY, inputWidth, inputHeight);
+            PlaceSprite(lockInputFillBack, 0f, inputY, inputWidth - 0.04f, inputHeight - 0.04f);
+
+            PlaceText(lockInputMaskLabel, 0f, inputY, inputWidth - 0.08f, inputHeight * 0.88f);
+            PlaceText(backLockInputMaskLabel, 0f, inputY, inputWidth - 0.08f, inputHeight * 0.88f);
+
+            // WindowBack 투시용 4자리 동그라미 (각 자릿수 위치에 배치)
+            float slotSpacing = inputWidth / 4f;
+            float firstSlotX = -inputWidth * 0.5f + slotSpacing * 0.5f;
+            for (int d = 0; d < 4; d++)
+            {
+                float dotX = firstSlotX + d * slotSpacing;
+                float dotDiameter = PasscodeDotDiameters[d];
+                PlaceSprite(passcodeBackDots[d], dotX, inputY, dotDiameter, dotDiameter);
+            }
+
+            // 온스크린 키패드: 3열 4행
+            // row 0: 1, 2, 3
+            // row 1: 4, 5, 6
+            // row 2: 7, 8, 9
+            // row 3: C, 0
+            float keypadTopY = dialogCenterY - dialogHeight * 0.09f;
+            float btnWidth = 0.52f;
+            float btnHeight = 0.28f;
+            float spacingX = 0.58f;
+            float spacingY = 0.33f;
+
+            for (int b = 0; b < KeypadButtonCount; b++)
+            {
+                int row = b / 3;
+                int col = b % 3;
+
+                float btnX = (col - 1) * spacingX;
+                float btnY = keypadTopY - row * spacingY;
+
+                keypadButtonRects[b] = CenterRect(btnX, btnY, btnWidth, btnHeight);
+
+                PlaceSprite(keypadButtonBordersFront[b], btnX, btnY, btnWidth, btnHeight);
+                PlaceSprite(keypadButtonFillsFront[b], btnX, btnY, btnWidth - 0.03f, btnHeight - 0.03f);
+                PlaceSprite(keypadButtonBordersBack[b], btnX, btnY, btnWidth, btnHeight);
+                PlaceSprite(keypadButtonFillsBack[b], btnX, btnY, btnWidth - 0.03f, btnHeight - 0.03f);
+
+                PlaceText(keypadButtonLabelsFront[b], btnX, btnY, btnWidth, btnHeight * 0.88f);
+                PlaceText(keypadButtonLabelsBack[b], btnX, btnY, btnWidth, btnHeight * 0.88f);
+            }
         }
 
         private void LayoutHanoiElements(float width, float fullHeight, float top)
@@ -1269,6 +1572,41 @@ namespace WindowExe.Desktop.Desktop.Window
             SetLayer(notFound404Back, SecondarySortingLayerName, baseOrder + 2);
             SetLayer(gunResultFront, PrimarySortingLayerName, baseOrder + 2);
             SetLayer(gunResultBack, SecondarySortingLayerName, baseOrder + 2);
+
+            // Step 1: 암호 잠금 화면 (WindowFront & WindowBack)
+            SetLayer(lockDialogBorderFront, PrimarySortingLayerName, baseOrder + 1);
+            SetLayer(lockDialogFillFront, PrimarySortingLayerName, baseOrder + 2);
+            SetLayer(lockDialogBorderBack, SecondarySortingLayerName, baseOrder + 1);
+            SetLayer(lockDialogFillBack, SecondarySortingLayerName, baseOrder + 2);
+
+            SetLayer(lockTitleLabel, PrimarySortingLayerName, baseOrder + 4);
+            SetLayer(backLockTitleLabel, SecondarySortingLayerName, baseOrder + 4);
+            SetLayer(lockGuideLabel, PrimarySortingLayerName, baseOrder + 4);
+            SetLayer(backLockGuideLabel, SecondarySortingLayerName, baseOrder + 4);
+            SetLayer(lockErrorLabel, PrimarySortingLayerName, baseOrder + 4);
+            SetLayer(backLockErrorLabel, SecondarySortingLayerName, baseOrder + 4);
+
+            SetLayer(lockInputBorderFront, PrimarySortingLayerName, baseOrder + 3);
+            SetLayer(lockInputFillFront, PrimarySortingLayerName, baseOrder + 4);
+            SetLayer(lockInputBorderBack, SecondarySortingLayerName, baseOrder + 3);
+            SetLayer(lockInputFillBack, SecondarySortingLayerName, baseOrder + 4);
+
+            SetLayer(lockInputMaskLabel, PrimarySortingLayerName, baseOrder + 6);
+            SetLayer(backLockInputMaskLabel, SecondarySortingLayerName, baseOrder + 6);
+
+            for (int d = 0; d < 4; d++)
+                SetLayer(passcodeBackDots[d], SecondarySortingLayerName, baseOrder + 6);
+
+            for (int b = 0; b < KeypadButtonCount; b++)
+            {
+                SetLayer(keypadButtonBordersFront[b], PrimarySortingLayerName, baseOrder + 3);
+                SetLayer(keypadButtonFillsFront[b], PrimarySortingLayerName, baseOrder + 4);
+                SetLayer(keypadButtonLabelsFront[b], PrimarySortingLayerName, baseOrder + 5);
+
+                SetLayer(keypadButtonBordersBack[b], SecondarySortingLayerName, baseOrder + 3);
+                SetLayer(keypadButtonFillsBack[b], SecondarySortingLayerName, baseOrder + 4);
+                SetLayer(keypadButtonLabelsBack[b], SecondarySortingLayerName, baseOrder + 5);
+            }
         }
 
         private static void SetLayer(Renderer renderer, string sortingLayer, int order)
@@ -1323,9 +1661,44 @@ namespace WindowExe.Desktop.Desktop.Window
                 offlineLabel == null ||
                 backOfflineLabel == null ||
                 glitchRed == null ||
-                glitchBlue == null)
+                glitchBlue == null ||
+                lockDialogBorderFront == null ||
+                lockDialogFillFront == null ||
+                lockDialogBorderBack == null ||
+                lockDialogFillBack == null ||
+                lockInputBorderFront == null ||
+                lockInputFillFront == null ||
+                lockInputBorderBack == null ||
+                lockInputFillBack == null ||
+                lockTitleLabel == null ||
+                backLockTitleLabel == null ||
+                lockGuideLabel == null ||
+                backLockGuideLabel == null ||
+                lockErrorLabel == null ||
+                backLockErrorLabel == null ||
+                lockInputMaskLabel == null ||
+                backLockInputMaskLabel == null)
             {
                 return false;
+            }
+
+            for (int d = 0; d < 4; d++)
+            {
+                if (passcodeBackDots[d] == null)
+                    return false;
+            }
+
+            for (int b = 0; b < KeypadButtonCount; b++)
+            {
+                if (keypadButtonBordersFront[b] == null ||
+                    keypadButtonFillsFront[b] == null ||
+                    keypadButtonBordersBack[b] == null ||
+                    keypadButtonFillsBack[b] == null ||
+                    keypadButtonLabelsFront[b] == null ||
+                    keypadButtonLabelsBack[b] == null)
+                {
+                    return false;
+                }
             }
 
             for (int p = 0; p < HanoiPegCount; p++)
@@ -1382,6 +1755,21 @@ namespace WindowExe.Desktop.Desktop.Window
 
             ManualTick(Time.unscaledDeltaTime);
 
+            if (errorMessageTimer > 0f)
+            {
+                errorMessageTimer -= Time.unscaledDeltaTime;
+                if (errorMessageTimer <= 0f)
+                {
+                    errorMessageTimer = 0f;
+                    RefreshUI();
+                }
+            }
+
+            if (CurrentStep == InternetStep.LockScreen)
+            {
+                HandleKeyboardInputForPasscode();
+            }
+
             if (online && dropdownOpen && !decoded)
             {
                 TryRevealThirdHistory();
@@ -1426,6 +1814,28 @@ namespace WindowExe.Desktop.Desktop.Window
 
             if (IsCoveredByFrontWindow(mouseWorld))
                 return;
+
+            // Step 1: 잠금 화면에서는 온스크린 키패드 클릭 처리
+            if (CurrentStep == InternetStep.LockScreen)
+            {
+                for (int b = 0; b < KeypadButtonCount; b++)
+                {
+                    if (keypadButtonRects[b].Contains(local))
+                    {
+                        string btnLabel = KeypadLabels[b];
+                        if (btnLabel == "C")
+                        {
+                            ClearPasscode();
+                        }
+                        else if (btnLabel.Length == 1 && char.IsDigit(btnLabel[0]))
+                        {
+                            InputPasscodeDigit(btnLabel[0]);
+                        }
+                        return;
+                    }
+                }
+                return;
+            }
 
             if (!online)
             {
@@ -2305,18 +2715,71 @@ namespace WindowExe.Desktop.Desktop.Window
         {
             if (!initialized || !ReferencesReady()) return;
 
+            bool isLockScreen = !IsPasswordUnlocked;
             bool online = IsOnline;
-            bool isPhase3_404 = online && phase3Result == InternetPhase.Result404;
-            bool isPhase3_Gun = online && phase3Result == InternetPhase.ResultGun;
+            bool isPhase3_404 = !isLockScreen && online && phase3Result == InternetPhase.Result404;
+            bool isPhase3_Gun = !isLockScreen && online && phase3Result == InternetPhase.ResultGun;
             bool isPhase3 = isPhase3_404 || isPhase3_Gun;
 
-            bool showHanoi = !online;
+            bool showHanoi = !isLockScreen && !online;
             bool showOfflineIcon = showHanoi && offlineIconSprite != null;
 
             // 브라우저 배경: WindowFront(artwork)와 WindowBack(backArtwork) 모두 항상 활성화하여
             // Primary와 Secondary 양쪽에서 동일한 메인 화면 렌더링 유지
             artwork.gameObject.SetActive(true);
             backArtwork.gameObject.SetActive(true);
+
+            // Step 1: 잠금 화면 UI (WindowFront & WindowBack)
+            lockDialogBorderFront.gameObject.SetActive(isLockScreen);
+            lockDialogFillFront.gameObject.SetActive(isLockScreen);
+            lockDialogBorderBack.gameObject.SetActive(isLockScreen);
+            lockDialogFillBack.gameObject.SetActive(isLockScreen);
+
+            lockTitleLabel.gameObject.SetActive(isLockScreen);
+            backLockTitleLabel.gameObject.SetActive(isLockScreen);
+            lockGuideLabel.gameObject.SetActive(isLockScreen);
+            backLockGuideLabel.gameObject.SetActive(isLockScreen);
+            lockErrorLabel.gameObject.SetActive(isLockScreen);
+            backLockErrorLabel.gameObject.SetActive(isLockScreen);
+
+            string errorMsg = errorMessageTimer > 0f ? "암호가 올바르지 않습니다." : "";
+            lockErrorLabel.text = errorMsg;
+            backLockErrorLabel.text = errorMsg;
+
+            lockInputBorderFront.gameObject.SetActive(isLockScreen);
+            lockInputFillFront.gameObject.SetActive(isLockScreen);
+            lockInputBorderBack.gameObject.SetActive(isLockScreen);
+            lockInputFillBack.gameObject.SetActive(isLockScreen);
+
+            lockInputMaskLabel.gameObject.SetActive(isLockScreen);
+            backLockInputMaskLabel.gameObject.SetActive(isLockScreen);
+
+            // 마스킹 텍스트: 입력된 글자 수만큼 * 표시 (예: "*   *   *   *")
+            string maskText = "";
+            for (int i = 0; i < currentPasscodeInput.Length; i++)
+            {
+                maskText += (i > 0 ? "   *" : "*");
+            }
+            lockInputMaskLabel.text = maskText;
+            backLockInputMaskLabel.text = maskText;
+
+            // WindowBack 투시 동그라미 4개 (WindowBack에만 활성화)
+            for (int d = 0; d < 4; d++)
+            {
+                passcodeBackDots[d].gameObject.SetActive(isLockScreen);
+                passcodeBackDots[d].color = passcodeDotColor;
+            }
+
+            // 온스크린 키패드
+            for (int b = 0; b < KeypadButtonCount; b++)
+            {
+                keypadButtonBordersFront[b].gameObject.SetActive(isLockScreen);
+                keypadButtonFillsFront[b].gameObject.SetActive(isLockScreen);
+                keypadButtonBordersBack[b].gameObject.SetActive(isLockScreen);
+                keypadButtonFillsBack[b].gameObject.SetActive(isLockScreen);
+                keypadButtonLabelsFront[b].gameObject.SetActive(isLockScreen);
+                keypadButtonLabelsBack[b].gameObject.SetActive(isLockScreen);
+            }
 
             // Phase 1: 네트워크 연결 하노이 탑 UI
             offlineIconFront.gameObject.SetActive(showHanoi);
@@ -2346,7 +2809,7 @@ namespace WindowExe.Desktop.Desktop.Window
             }
 
             // Phase 2: 검색 기록 UI (비-텍스트 요소와 텍스트를 WindowFront와 WindowBack 양쪽에 모두 렌더링)
-            bool showSearch = online && !isPhase3;
+            bool showSearch = !isLockScreen && online && !isPhase3;
             heading.gameObject.SetActive(showSearch);
             backHeading.gameObject.SetActive(showSearch);
             frontSearchBorder.gameObject.SetActive(showSearch);
@@ -2567,6 +3030,163 @@ namespace WindowExe.Desktop.Desktop.Window
             );
 
             return whitePixel;
+        }
+
+        private static Sprite CircleSprite()
+        {
+            if (circleSprite != null) return circleSprite;
+
+            const int texSize = 64;
+            var texture = new Texture2D(texSize, texSize, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            float center = (texSize - 1) * 0.5f;
+            float radius = texSize * 0.48f;
+
+            for (int y = 0; y < texSize; y++)
+            {
+                for (int x = 0; x < texSize; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
+                    float alpha = Mathf.Clamp01((radius - dist) + 0.5f);
+                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            texture.Apply();
+
+            circleSprite = Sprite.Create(
+                texture,
+                new Rect(0, 0, texSize, texSize),
+                new Vector2(0.5f, 0.5f),
+                texSize
+            );
+
+            return circleSprite;
+        }
+
+        private void HandleKeyboardInputForPasscode()
+        {
+            var kb = Keyboard.current;
+            if (kb == null) return;
+
+            // 숫자 키 (상단 숫자 0~9)
+            if (kb.digit1Key.wasPressedThisFrame) InputPasscodeDigit('1');
+            else if (kb.digit2Key.wasPressedThisFrame) InputPasscodeDigit('2');
+            else if (kb.digit3Key.wasPressedThisFrame) InputPasscodeDigit('3');
+            else if (kb.digit4Key.wasPressedThisFrame) InputPasscodeDigit('4');
+            else if (kb.digit5Key.wasPressedThisFrame) InputPasscodeDigit('5');
+            else if (kb.digit6Key.wasPressedThisFrame) InputPasscodeDigit('6');
+            else if (kb.digit7Key.wasPressedThisFrame) InputPasscodeDigit('7');
+            else if (kb.digit8Key.wasPressedThisFrame) InputPasscodeDigit('8');
+            else if (kb.digit9Key.wasPressedThisFrame) InputPasscodeDigit('9');
+            else if (kb.digit0Key.wasPressedThisFrame) InputPasscodeDigit('0');
+            // 넘패드 숫자 키 0~9
+            else if (kb.numpad1Key.wasPressedThisFrame) InputPasscodeDigit('1');
+            else if (kb.numpad2Key.wasPressedThisFrame) InputPasscodeDigit('2');
+            else if (kb.numpad3Key.wasPressedThisFrame) InputPasscodeDigit('3');
+            else if (kb.numpad4Key.wasPressedThisFrame) InputPasscodeDigit('4');
+            else if (kb.numpad5Key.wasPressedThisFrame) InputPasscodeDigit('5');
+            else if (kb.numpad6Key.wasPressedThisFrame) InputPasscodeDigit('6');
+            else if (kb.numpad7Key.wasPressedThisFrame) InputPasscodeDigit('7');
+            else if (kb.numpad8Key.wasPressedThisFrame) InputPasscodeDigit('8');
+            else if (kb.numpad9Key.wasPressedThisFrame) InputPasscodeDigit('9');
+            else if (kb.numpad0Key.wasPressedThisFrame) InputPasscodeDigit('0');
+            // 백스페이스 및 Delete
+            else if (kb.backspaceKey.wasPressedThisFrame || kb.deleteKey.wasPressedThisFrame)
+            {
+                DeleteLastPasscodeDigit();
+            }
+        }
+
+        public void InputPasscodeDigit(char digit)
+        {
+            if (IsPasswordUnlocked || currentPasscodeInput.Length >= 4) return;
+            currentPasscodeInput += digit;
+            PlayHanoiSound(HanoiSoundType.Select);
+
+            if (currentPasscodeInput.Length == 4)
+            {
+                ValidatePasscode();
+            }
+            else
+            {
+                RefreshUI();
+            }
+        }
+
+        public void DeleteLastPasscodeDigit()
+        {
+            if (IsPasswordUnlocked || currentPasscodeInput.Length == 0) return;
+            currentPasscodeInput = currentPasscodeInput.Substring(0, currentPasscodeInput.Length - 1);
+            PlayHanoiSound(HanoiSoundType.Select);
+            RefreshUI();
+        }
+
+        public void ClearPasscode()
+        {
+            if (IsPasswordUnlocked || currentPasscodeInput.Length == 0) return;
+            currentPasscodeInput = "";
+            PlayHanoiSound(HanoiSoundType.Select);
+            RefreshUI();
+        }
+
+        public bool ValidatePasscode()
+        {
+            if (currentPasscodeInput == passcode)
+            {
+                isPasswordUnlocked = true;
+                errorMessageTimer = 0f;
+                PlayHanoiSound(HanoiSoundType.Connected);
+                RefreshUI();
+                return true;
+            }
+            else
+            {
+                currentPasscodeInput = "";
+                errorMessageTimer = errorMessageDuration;
+                PlayHanoiSound(HanoiSoundType.Error);
+                RefreshUI();
+                return false;
+            }
+        }
+
+        public Vector2 GetPasscodeDotSize(int index)
+        {
+            if (index < 0 || index >= 4 || passcodeBackDots[index] == null)
+                return Vector2.zero;
+            return passcodeBackDots[index].transform.localScale;
+        }
+
+        public Color GetPasscodeDotColor(int index)
+        {
+            if (index < 0 || index >= 4 || passcodeBackDots[index] == null)
+                return Color.clear;
+            return passcodeBackDots[index].color;
+        }
+
+        public Rect GetPasscodeBackDotWorldRect(int index)
+        {
+            if (index < 0 || index >= 4 || passcodeBackDots[index] == null)
+                return default;
+            var pos = passcodeBackDots[index].transform.position;
+            var scale = passcodeBackDots[index].transform.lossyScale;
+            return CenterRect(pos.x, pos.y, scale.x, scale.y);
+        }
+
+        public Rect GetKeypadButtonWorldRect(int buttonIndex)
+        {
+            if (buttonIndex < 0 || buttonIndex >= KeypadButtonCount)
+                return default;
+            return WorldRect(keypadButtonRects[buttonIndex], transform);
+        }
+
+        public void SimulatePasscodeInput(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return;
+            for (int i = 0; i < input.Length; i++)
+            {
+                InputPasscodeDigit(input[i]);
+            }
         }
 
 #if UNITY_EDITOR

@@ -855,3 +855,49 @@ Ryzen 7 7735HS·Radeon 680M·Direct3D12에서 동일한 Development/Instrumented
 - [x] 글꼴 충돌은 glyph·문자·atlas가 일치하는 로컬 에셋 전체를 유지해 해결했다. 체크리스트는 원격 30장과 로컬 GIF 제작 기록을 함께 보존했다. 원격 repair 등록·총/열쇠 코드와 로컬 입력·보스전 변경을 통합했고 충돌 표시와 스테이징은 정리했다.
 - [x] 병합 후 Unity 컴파일 오류 없음, WindowBorderTests 15/15·InternetWindowTests 10/10·보스전 최초 눈/오류 진입 1/1·실제 입력 경로의 1→2페이즈 전환 1/1로 관련 검사 총 27/27 통과했다. 신규 파일 160개는 stash와 blob 해시가 동일하며 글꼴 디스크 사본의 SHA-256도 일치한다.
 - [ ] 실제 Play 조작·새 Windows 실행 파일 빌드는 이번 병합에서 아직 확인하지 않았다. 원격 RepairWindow의 이미지·이벤트 미할당은 기존 후속 항목이며 임의로 연결하지 않는다.
+
+## 32. 인터넷 창 4단계 구조 전환 및 1단계 4자리 암호 잠금(투시 동그라미 기믹) 구현 — 2026-11-01
+
+사용자 요청에 따라 보스전 페이즈와의 혼동을 방지하기 위해 인터넷 창 단계를 `InternetStep` 기반의 4단계(1단계 암호 잠금, 2단계 하노이 탑, 3단계 검색 기록, 4단계 결과)로 분리하고, 1단계에 4자리 비밀번호(`1971`) 잠금 화면과 WINDOW.exe 투시 동그라미 기믹을 구현했다.
+
+- [x] **`InternetStep` 단계 체계 정의:**
+  - `InternetStep` enum(`LockScreen`, `NetworkPuzzle`, `SearchHistory`, `Result404`, `ResultGun`) 및 `CurrentStep` 프로퍼티 신규 구현.
+  - 기존 `InternetPhase` 및 `CurrentPhase`는 하위 호환성을 위해 유지.
+- [x] **1단계 4자리 암호 잠금 UI 및 입력 지원:**
+  - 클래식 다이얼로그 박스 스타일의 암호 입력 UI(타이틀바, 안내 라벨, 에러 라벨, 입력 필드) 구성.
+  - `*   *   *   *` 마스킹 표시 및 키보드(숫자 0~9, 백스페이스, Delete)와 온스크린 키패드(0~9 버튼, 'C' 클리어 버튼) 입력 동시 지원.
+  - 4자리 입력 즉시 자동 검증(확인 버튼 없음).
+  - 오답 시 에러 사운드 재생 + 입력칸 자동 비움 + "암호가 올바르지 않습니다." 에러 문구 1.8초간 표시 후 자동 비움.
+- [x] **A5 핵심 기믹 (WINDOW.exe 투시 동그라미 4개):**
+  - `WindowBack` 레이어에 정답(`1971`)의 숫자 대소 관계(`1 < 7 < 9`)에 비례하는 크기의 검은색(`Color.black`) 원 4개(`passcodeBackDots`)를 입력칸 자릿수 위치에 사전 단서로 배치.
+  - 크기 비율: 1번 자리(엄청 작음, 0.10) / 2번 자리(엄청 큼, 0.44) / 3번 자리(조금 큼, 0.26) / 4번 자리(엄청 작음, 0.10).
+  - `WINDOW.exe` 창을 마스크 위에 올려놓았을 때 `WindowBack`의 검은색 동그라미 4개가 투시되어 나타남.
+- [x] **잠금 해제 상태 지속성 및 2단계 전환:**
+  - 정답 `1971` 입력 성공 시 성공 효과음 재생 및 `InternetWindow.IsPasswordUnlocked` 정적 상태 활성화.
+  - 창을 닫았다가 다시 열어도 잠금 해제 상태가 유지되어 비밀번호 화면을 다시 거치지 않고 바로 2단계(하노이 탑)로 진입.
+- [x] **단위 테스트 작성 (`InternetWindowTests.cs`):**
+  - 기존 10건 테스트의 연속성을 보장하기 위해 기본 Setup에 비밀번호 해제 연동.
+  - 신규 단위 테스트 4건 추가:
+    1. `StartsInStep1LockScreenWithMaskAndWindowBackDots`: 초기 1단계 시작, 마스킹 및 WindowBack 투시 동그라미 4개의 크기 비율(1 < 7 < 9)과 검은색 색상 검증.
+    2. `IncorrectPasscodeClearsInputAndShowsErrorMessage`: 오답 4자리 입력 즉시 실패, 입력값 자동 비움, 에러 문구 표시 및 에러 사운드 검증.
+    3. `CorrectPasscodeTransitionsToNetworkPuzzleAndPersistsAcrossReopen`: 정답 `1971` 입력 시 잠금 해제, 2단계 네트워크 퍼즐 전환, 창 닫고 다시 열어도 잠금 해제 유지 검증.
+    4. `KeypadButtonsCanInputAndClearDigits`: 온스크린 키패드 마우스 클릭 입력 및 'C' 클리어 동작 검증.
+- [ ] Unity 에디터 Play Mode에서 실제 비밀번호 다이얼로그 조작 및 WINDOW.exe 겹침 시 동그라미 투시 시각 확인.
+
+## 33. 데스크톱 메인 퀘스트 시퀀스 디렉터 (`DesktopQuestDirector`) 구현 — 2026-11-01
+
+사용자 요청 및 후속 피드백에 따라 Desktop 씬 시작 시 초기 아이콘 4개 노출 및 `memo.txt` 자동 오픈, `WINDOW(1).exe`와 `memo.txt` 겹침 시 `image.png` 출현, `PeepPuzzleWindow` 출구 제거, Wi-Fi 연결 시 `key.txt` 출현까지를 `DesktopQuestDirector`로 구현하고, 휴지통(`RepairWindow`)부터 보스전 진입까지의 로직은 팀원 작업 분리를 위해 git HEAD와 동일하게 유지(롤백)했다.
+
+- [x] **`DesktopQuestDirector.cs` 구현 (초기 상태 ~ `key.txt` 출현):**
+  - **초기 상태:** `Desktop.unity` 시작 시 바탕화면 활성 아이콘을 4개(`Icon_recycle-bin`, `Icon_memo`, `Icon_internet`, `Icon_window`)로 유지하고 `image.png`(`Icon-peep`)와 `key.txt`(`KeyFileIcon`)는 `SetActive(false)`로 비활성화.
+  - **`memo.txt` 자동 오픈 및 인터넷 상시 허용:** `Start()`에서 `WindowManager.Instance.Open("memo")`로 메모장 창을 자동 오픈하고, 인터넷 창은 비밀번호 단서 확인 등을 위해 처음부터 열 수 있도록 허용.
+  - **HELP ME 투시 감지:** `WINDOW(1).exe` 창과 `memo.txt` 창의 영역(`OuterBounds`)이 겹치는 즉시(0초 대기) `image.png`(`Icon-peep`) 아이콘을 `SetActive(true)`로 활성화하고 빈 그리드 슬롯에 배치.
+  - **Wi-Fi 연결 감지:** 하노이 탑 퍼즐 해결로 `WifiConnection.SetConnected(true)` 호출 시 즉시 `key.txt`(`KeyFileIcon`) 아이콘을 `SetActive(true)`로 활성화하고 빈 그리드 슬롯에 배치.
+  - **휴지통 이후 로직 분리:** `DesktopSessionContracts.cs`, `BossFightController.cs`, `RepairWindow` 관련 코드는 git HEAD와 동일하게 원복.
+- [x] **`PeepPuzzleWindow` 출구(Escape) 오브젝트 비활성화:**
+  - `PeepPuzzleWindow.prefab`의 `Escape` 오브젝트를 `m_IsActive: 0` 및 `escapeObject: null`로 설정하고, `PeepPuzzleWindow.cs`와 `PeepPuzzleBuilder.cs`에서 출구 없이 단서 4개 클릭 시 창이 닫히지 않고 열린 상태를 유지하도록 갱신.
+- [x] **`Desktop.unity` 씬 구성 및 참조 연결:**
+  - `WindowWorldRoot`에 `DesktopQuestDirector` 컴포넌트를 추가하고 `Icon-peep`·`KeyFileIcon`의 초기 `m_IsActive`를 `0`으로 설정.
+- [x] **Unity CLI (`6000.6.7f1`) EditMode 단위 테스트 검증:**
+  - `DesktopQuestDirectorTests` 신규 4건, `PeepPuzzleWindowTests` 9건, `WindowBorderTests` 15건 총 **28/28 전원 통과** 확인.
+- [ ] Unity 에디터 Play Mode에서 메모 자동 오픈 → WINDOW.exe 겹침으로 image.png 출현 → Wi-Fi 연결로 key.txt 출현 흐름 직접 시각 확인.

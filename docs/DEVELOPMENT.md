@@ -1239,13 +1239,39 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 
 현재 프로젝트에는 이 기믹의 자동 설치·On/Off API·사용자 설정 UI를 연결하지 않는다. 기존 OS 커서와 Unity 입력 경로를 사용한다. 이전의 상세 계획과 시험 결과는 제외된 시험 구현의 기록이며 제품 완료나 향후 필수 작업을 뜻하지 않는다. 현재 상태는 [체크리스트 23장](IMPLEMENTATION_CHECKLIST.md#23-간헐적인-마우스-끊김-구현-계획--2026-10-31)을 따른다.
 
-## 19. 인터넷 창 3페이즈(하노이 탑 네트워크 퍼즐, 검색 기록, 검색 결과 화면)와 리소스 지원
+## 19. 인터넷 창 4단계 구조(1단계 암호 잠금, 2단계 하노이 탑 네트워크 퍼즐, 3단계 검색 기록, 4단계 검색 결과 화면)와 리소스 지원
 
-`InternetWindow`를 **Phase 1(네트워크 연결 하노이 탑 퍼즐)**, **Phase 2(검색 기록 화면)**, **Phase 3(검색 결과 화면 - 404 및 총 이미지 덧씌움)**의 3단계 구조로 구현했다.
+보스전의 전투 페이즈(`Phase`)와의 혼동을 방지하고 퍼즐 진행 단계를 명확히 분리하기 위해 `InternetWindow`를 **`InternetStep` 기반의 4단계 구조**로 재구성했다. 기존 `InternetPhase` 및 `CurrentPhase`는 하위 호환성을 위해 유지된다.
 
-- **상태 전환 (`WifiConnection` 연동):**
-  - `WifiConnection`의 기본 연결 상태를 `false`(오프라인)로 시작한다.
-  - 오프라인 상태(`IsOnline == false`)에서는 Phase 1 하노이 탑 퍼즐이 표시되며, 세 번째 막대에 모든 원반을 옮겨 퍼즐을 해결하면 `WifiConnection.SetConnected(true)`를 호출해 Phase 2 검색 기록 화면으로 전환한다.
+- **1단계: 암호 잠금 화면 (`InternetStep.LockScreen`):**
+  - 인터넷 창을 최초로 열었을 때 클래식 다이얼로그 박스 형태의 4자리 비밀번호 잠금 화면이 표시된다.
+  - **입력 지원 (키보드 & 온스크린 키패드):**
+    - 키보드 숫자키(상단 숫자 및 넘패드 0~9), 백스페이스/Delete 키 입력을 지원한다.
+    - 브라우저 내부 다이얼로그의 0~9 숫자 버튼 및 지우기('C') 온스크린 키패드 마우스 클릭 입력을 함께 지원한다.
+  - **마스킹 및 즉시 검증:**
+    - 입력된 자릿수에 맞춰 `*   *   *   *` 형태로 마스킹 표시된다.
+    - 4자리가 입력되는 즉시 자동으로 정답(`1971`) 여부를 검증한다 (확인 버튼 없음).
+  - **오답 피드백:**
+    - 오답 입력 시 에러 사운드를 재생하고, 입력칸을 즉시 비우며, 비밀번호 위쪽에 "암호가 올바르지 않습니다." 에러 문구를 약 1.8초간 표시한 후 자동으로 다시 비운다.
+  - **A5 핵심 기믹 (WINDOW.exe 투시 동그라미 4개):**
+    - `WindowBack` 레이어에 정답(`1971`)의 숫자 대소 관계(`1 < 7 < 9`)에 비례하는 크기의 검은색(`Color.black`) 원 4개(`passcodeBackDots`)가 자릿수 위치에 사전 단서로 항상 배치된다.
+    - 크기 비율: 1번 자리(엄청 작음, 지름 0.10) / 2번 자리(엄청 큼, 지름 0.44) / 3번 자리(조금 큼, 지름 0.26) / 4번 자리(엄청 작음, 지름 0.10).
+    - 평소에는 마스킹(`****`)만 보이지만, `WINDOW.exe` 창을 마스크 위로 가져다대면 `WindowBack`의 검은색 동그라미 4개가 뚜렷하게 투시되어 숫자의 대소 관계 힌트를 제공한다.
+  - **잠금 해제 유지:**
+    - 정답 `1971`을 맞추면 성공 사운드와 함께 `InternetWindow.IsPasswordUnlocked` 상태가 활성화된다.
+    - 창을 닫았다가 다시 열어도 잠금 해제 상태가 유지되어 비밀번호 화면을 다시 거치지 않고 바로 2단계(또는 3단계)로 진입한다.
+
+- **2단계: 네트워크 연결 하노이 탑 퍼즐 (`InternetStep.NetworkPuzzle`):**
+  - 와이파이가 오프라인인 상태(`IsOnline == false`)에서 활성화된다.
+  - 세 번째 막대에 모든 원반을 옮겨 퍼즐을 해결하면 `WifiConnection.SetConnected(true)`를 호출해 3단계 검색 기록 화면으로 전환한다.
+
+- **3단계: 검색 기록 화면 (`InternetStep.SearchHistory`):**
+  - 와이파이 연결 시 활성화되며 검색창 및 드롭다운 검색 기록 3행이 표시된다.
+  - 3번째 행은 WINDOW.exe로 가려 해독하면 "◷ 총"으로 변환된다.
+
+- **4단계: 검색 결과 화면 (`InternetStep.Result404` / `InternetStep.ResultGun`):**
+  - 1·2번째 기록 클릭 시 404 결과 화면, 해독된 3번째 기록 클릭 시 총 화면으로 전환된다. 총 클릭 시 발사 기믹이 연동된다.
+
 - **오프라인 네트워크 스프라이트 (수동 할당 지원):**
   - '네트워크 연결이 끊어졌습니다' 안내 텍스트 위쪽에 인스펙터에서 수동 할당할 수 있는 `offlineIconSprite` 필드를 제공한다.
   - `offlineIconSize`(기본 0.85×0.85)와 `offlineIconOffset`으로 크기 및 위치 미세 조정을 지원하며, 스프라이트가 미할당(null)인 경우 렌더러가 비활성화되어 화면에 나타나지 않는다.
@@ -1342,3 +1368,18 @@ Desktop 씬에서 `photos` 아이콘 오브젝트와 DesktopController 등록을
 ### 원격 main 추가 병합 — 2026-11-01
 
 main은 `80299e0`까지 반영하고 기존 미커밋 보스전·데스크톱 작업을 복원했다. `Window`의 양쪽 테두리 파괴 API와 로컬 GeometryConstraint, `InternetWindow.PointerLeftPressed(Vector2)` 입력 연결을 함께 유지한다. Desktop 씬의 `repair` 등록과 FolderWindow/RepairWindow/ExtractedKeyEntity도 원격 구현을 따른다. 이미지·이벤트 미할당과 검증 범위는 체크리스트 30·31장을 따른다. 이번 글꼴 충돌은 원본 폰트/동적 설정이 같음을 확인하고 로컬 glyph·atlas 캐시 전체를 유지했다. 복구용 stash와 디스크 사본을 보관하며 원래 미스테이징 상태를 유지한다.
+
+## 22. 데스크톱 메인 퀘스트 시퀀스 디렉터 (`DesktopQuestDirector`)
+
+- **퀘스트 진행 제어 (`DesktopQuestDirector.cs`):**
+  - `Desktop.unity` 씬의 `WindowWorldRoot`에 장착되어 게임 시작부터 Wi-Fi 연결 후 `key.txt` 출현까지의 단계별 상태 전이를 관리한다 (휴지통 및 복원 창 이후 보스전 진입 로직은 다른 팀원 작업 분리를 위해 제외).
+  - **1단계 — 초기 바탕화면 아이콘 4개 및 `memo.txt` 자동 오픈:**
+    - 시작 시 바탕화면에 노출되는 활성 아이콘은 **4개**(`Icon_recycle-bin`, `Icon_memo`, `Icon_internet`, `Icon_window`)로 유지하며, `image.png`(`Icon-peep`, `itemId = "peepWindow"`)와 `key.txt`(`KeyFileIcon`, `itemId = "key-file"`)는 `SetActive(false)` 상태로 시작한다.
+    - `Start()` 시점에 `WindowManager.Instance.Open("memo")`를 호출하여 `memo.txt` 창이 자동으로 열린 채 시작한다.
+    - 인터넷 창(`"internet"`)은 비밀번호 단서 확인 등을 위해 처음부터 언제든 열 수 있도록 허용한다.
+  - **2단계 — `WINDOW(1).exe`와 `memo.txt` 겹침 감지 및 `image.png` 출현:**
+    - `WINDOW(1).exe`(`"window"`) 창과 `memo.txt`(`"memo"`) 창이 모두 열려 있고 화면상에서 영역(`OuterBounds`)이 서로 겹치는 즉시(별도 대기 시간 없음) `TriggerHelpMeSeen()`을 호출한다.
+    - `image.png`(`Icon-peep`) 아이콘을 `SetActive(true)`로 활성화하고 빈 그리드 슬롯에 배치하여 기존 아이콘과 겹치지 않게 표시한다.
+    - `PeepPuzzleWindow`에서는 더 이상 사용되지 않는 출구(`Escape`) 오브젝트를 비활성화하고, 모든 단서를 클릭해도 창이 강제로 닫히지 않도록 유지한다.
+  - **3단계 — 하노이 탑 해결(Wi-Fi 연결) 및 `key.txt` 출현:**
+    - 인터넷 창에서 하노이 탑 퍼즐을 해결하여 `WifiConnection.SetConnected(true)`가 호출되면 즉시 `TriggerKeyFileReveal()`을 호출해 바탕화면의 `key.txt`(`KeyFileIcon`) 아이콘을 `SetActive(true)`로 활성화한다.

@@ -92,11 +92,12 @@ namespace WindowExe.Desktop.Editor
             // 4. 주기적으로 봐야 하는 오브젝트 (Watcher)
             var watcherObj = GetOrCreatePuzzleChild(secondary, "Watcher", new Vector2(-1.8f, -1.0f), PeepObjectType.Watcher, new Color(0.2f, 0.6f, 0.9f, 0.7f));
 
-            // 5. 탈출 오브젝트 (Escape)
-            var escapeObj = GetOrCreatePuzzleChild(secondary, "Escape", new Vector2(1.8f, -1.0f), PeepObjectType.Escape, new Color(0.2f, 0.9f, 0.3f, 0.7f));
+            // 5. 탈출 오브젝트 (Escape) - 더 이상 사용하지 않으므로 기존 자식이 있으면 비활성화
+            var existingEscape = secondary.Find("Escape");
+            if (existingEscape != null) existingEscape.gameObject.SetActive(false);
 
             // 6. PeepPuzzleWindow에 연결
-            window.SetupPuzzleObjects(clues, new[] { dangerObj }, new[] { watcherObj }, escapeObj);
+            window.SetupPuzzleObjects(clues, new[] { dangerObj }, new[] { watcherObj }, null);
             window.DangerMaxTime = 3.0f;
             window.WatcherMaxUnseenTime = 10.0f;
             window.TargetWindowId = "window";

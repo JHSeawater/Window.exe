@@ -355,6 +355,22 @@ namespace WindowExe.Desktop.Desktop.Window
             {
                 escapeObject.SetUnlocked(AreAllCluesCollected);
             }
+            else
+            {
+                var secondaryTransform = transform.Find("Secondary");
+                var unusedEscape = secondaryTransform != null ? secondaryTransform.Find("Escape") : null;
+                if (unusedEscape != null && unusedEscape.gameObject.activeSelf)
+                {
+                    unusedEscape.gameObject.SetActive(false);
+                }
+
+                if (!isCleared && !isGameOver && clues != null && clues.Count > 0 && AreAllCluesCollected)
+                {
+                    isCleared = true;
+                    onPuzzleCleared?.Invoke();
+                    OnCleared?.Invoke();
+                }
+            }
         }
 
         public bool GetPeepViewport(out Rect viewport)

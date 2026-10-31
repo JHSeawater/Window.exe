@@ -638,7 +638,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &135550319063089142
 Transform:
   m_ObjectHideFlags: 0
@@ -1324,7 +1324,7 @@ MonoBehaviour:
   - {fileID: 5607276096476999165}
   watcherObjects:
   - {fileID: 6439964458866655025}
-  escapeObject: {fileID: 7480412033042157865}
+  escapeObject: {fileID: 0}
   audioSource: {fileID: 0}
   clueCollectedSound: {fileID: 0}
   puzzleClearedSound: {fileID: 0}
