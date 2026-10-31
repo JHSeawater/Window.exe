@@ -1734,6 +1734,7 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void Update()
         {
+            if (DesktopInputRouter.IsWorldInputBlocked) return;
             if (!initialized || !ReferencesReady()) return;
 
             bool online = IsOnline;

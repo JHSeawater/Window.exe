@@ -42,6 +42,8 @@
 - 로컬 에디터 도구가 생성한 `ProjectSettings/Packages/com.unity.pipeline/`과 `ProjectSettings/SceneTemplateSettings.json`은 제외한다.
 - `Library`, `Temp`, `Logs`, `UserSettings`, IDE 생성 파일은 각 환경에서 재생성한다.
 - 공유하는 Unity 에셋에는 해당 `.meta`를 함께 포함한다.
+- 복원 창의 자물쇠 이미지는 `Assets/Art/Item/Lock.png`·`Lock-rusted-bloody.png`와 해당 `.meta`·부모 `Item.meta`만 추가 공유한다. 같은 폴더의 다른 아트는 기존 제외 범위를 유지한다.
+- 현재 권한 경고에는 `Assets/Art/Warning/Lock.png`·`Unlock.png` 및 투시용 `Lock-rusted-bloody.png`·`Unlock-rusted-bloody.png`와 해당 메타를 추가 공유한다. Item 자물쇠 아트는 이전 구현 자원으로 보존하며 새 경고창에서는 사용하지 않는다.
 - `3e1405d`에 이미 공유된 `Assets/Shader Graph/Transparent.shadergraph`·`TPMaterial.mat`는 기존 경로를 유지하며, 누락된 부모/에셋 메타와 WINDOW.exe가 실제 참조하는 `TPM.mat`/메타만 명시적으로 허용한다. 그 외 로컬 셰이더 그래프 파일은 제외한다. 새 셰이더·재질의 기본 위치는 역할별 배치 규칙을 따른다.
 - 전달 패키지 `Backup/`과 검증 결과 `Builds/`는 로컬에 보존하고 공유하지 않는다.
 
@@ -209,7 +211,7 @@
 |---|---|
 | `PhotosUnlocked`·벽 단서 확인 | 앞 퍼즐의 조사 사실. 구체적인 열쇠 획득 조건은 별도 담당이 정함 |
 | `HasKey`·`RecycleBinUnlocked` | 열쇠 획득과 일반 휴지통 잠금 해제 |
-| `RestoreStarted` | 복원이 강제 다운로드와 직전 연출을 시작함 |
+| `LockWarningWindow.BossEntryRequested` | Unlock의 확인/X 클릭 신호. Boss 모듈의 LockWarningBossEntry가 받아 대기·화면 보존 후 기존 BeginBossFight로 연결. 현재 확인 범위는 체크리스트 39장 |
 | 보스전 세션·페이즈·저장 상태 | 창 인스턴스와 분리된 보스전 진행. 상세 계획은 17장 |
 | `RestoreCancelled` | 보스를 휴지통에 넣어 다운로드를 취소하고 보스전 완료를 인계함 |
 | `RecycleBinEmptied` | 엔딩 담당이 플레이어의 직접 비우기를 처리한 상태 |
@@ -879,7 +881,7 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 
 사용자 지정 `Assets/Art/Screen/Window_Desktop.png`를 기본 바탕화면을 비출 때의 배경으로 사용한다. `WindowExeWindow.prefab`의 `WindowDesktopCapture`와 `Data/Desktop/WindowDesktopViewport.mat`에 연결한다. 배경은 카메라 화면 전체에 대응하며 창의 이동/리사이즈는 같은 이미지의 보이는 영역만 바꾼다. 이미지가 창 크기에 맞춰 매번 다시 늘어나지 않는다.
 
-`WindowDesktopCapture`는 해당 Desktop 카메라의 렌더링 직전에 전용 RenderTexture에 배경 → 바탕화면 아이콘의 변형 이미지 → 표시 중인 관리자 창의 Secondary SpriteRenderer 순서로 합성한다. WINDOW.exe 본문만 이 텍스처를 화면 좌표로 샘플링한다. Primary·작업 표시줄·아이콘의 선택 강조/파일명 UI는 캡처하지 않는다. 기존 URP Camera Sorting Layer Texture 경계, Sorting Layer, 원본 Secondary 오브젝트의 레이어/표시 상태를 변경하지 않는다. 보스전의 별도 숨은 층 캡처와 구분한다.
+`WindowDesktopCapture`는 해당 Desktop 카메라의 렌더링 직전에 전용 RenderTexture에 배경 → 바탕화면 아이콘의 변형 이미지 → 표시 중인 관리자 창의 Secondary 스프라이트·TextMeshPro 순서로 합성한다. Secondary의 스프라이트와 텍스트는 같은 Sorting Layer/Order 기준으로 정렬해 배경이 글자를 덮지 않도록 한다. 변경된 TMP 메시를 갱신하고 원래 메시·글꼴 재질 및 TMP_SubMesh를 사용하며, 스프라이트용 재질로 글자를 그리지 않는다. 원본 TMP 메시·재질은 캡처가 소유하거나 파괴하지 않는다. WINDOW.exe 본문만 이 텍스처를 화면 좌표로 샘플링한다. Primary·작업 표시줄·아이콘의 선택 강조/파일명 UI는 캡처하지 않는다. 기존 URP Camera Sorting Layer Texture 경계, Sorting Layer, 원본 Secondary 오브젝트의 레이어/표시 상태를 변경하지 않는다. 보스전의 별도 숨은 층 캡처와 구분한다.
 
 런타임 코드는 `Scripts/Desktop/Window/WindowDesktopCapture.cs`, 셰이더는 `Shaders/Desktop/WindowDesktopViewport.shader`·`WindowSecondaryCapture.shader`에 둔다. 스프라이트의 정점/UV를 소유 메시로 한 번 캐시해 Unlit 색상·알파로 합성한다. 일반 Sprite는 원래 정점/UV를, 크기 지정 Sprite는 본문 크기에 맞춘 정점을 사용한다. 조명·마스크·타일링·9-slice 테두리를 재현하는 범용 SpriteRenderer 대체 기능은 아니다. 현재 Secondary 이미지/눈의 표시를 위한 경로이며 그런 효과를 추가할 때에는 별도 검증한다.
 
@@ -1330,18 +1332,28 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
     - `persistExtractionOnReopen` (기본 `true`): 열쇠를 꺼낸 뒤 열쇠 창을 닫았다가 다시 열었을 때, 열쇠는 밖을 유지하고 창은 양옆이 뚫린 빈 창으로 열릴지 여부.
   - **열쇠 사용 및 복원 윈도우 연동 (휴지통 연결 제거):**
     - 기존 열쇠-휴지통 연결점을 완전히 삭제했다. 열쇠를 바탕화면 휴지통 아이콘이나 폴더 창에 드롭해도 아무 반응이 일어나지 않는다.
-    - 열쇠 창이 깨져 밖으로 꺼낸 열쇠(또는 드래그 프록시)를 새로 추가된 **복원 윈도우(`RepairWindow`)** 위에 드롭하면 `repairWindow.TryUseKey()`가 호출되어 초기 이미지에서 두 번째 복원 이미지로 교체된다.
+    - 현재 열쇠 드롭 대상은 `LockWarningWindow`의 자물쇠 그림 영역이다. `RepairWindow.CanUseKeyAt`의 가상 판정을 통해 이미지 드래그와 독립 열쇠 경로 모두 이 영역을 사용한다. 경고 문구·빈 공간·확인 버튼에 놓으면 해제하지 않는다. 기존 일반 RepairWindow는 호환 코드/시험용 기반이며 Desktop 등록에서 제외했다.
     - **`consumeKeyOnUse` (기본값: `true`):**
       - `true`: 복원 창에 열쇠를 사용한 직후 열쇠가 소모(파괴)되어 사라진다.
       - `false`: 복원 창에 열쇠를 사용한 후에도 열쇠가 소멸하지 않고, 마우스가 놓인 위치에 독립 월드 엔티티로 그대로 유지되어 추가 조작이 가능하다.
 
-- **휴지통 폴더 윈도우 및 복원 윈도우 (`FolderWindow.cs` · `RepairWindow.cs`):**
+- **휴지통 폴더와 권한 경고 (`FolderWindow.cs` · `LockWarningWindow.cs`):**
   - **`FolderWindow` (휴지통 폴더 창):**
     - 바탕화면 휴지통 아이콘(`recycle-bin`)을 열었을 때 뜨는 폴더 창이다.
-    - 내부 콘텐츠 영역에 단일 실행 앱 아이콘(`executableItemName`: 기본 `"복원.exe"`, `targetExecutableWindowId`: 기본 `"repair"`)이 배치된다.
-    - 별도 선택 상태 없이, 해당 앱 아이콘을 **더블클릭**하면 `WindowManager.Instance.Open("repair")`가 호출되어 복원 윈도우가 열린다.
-  - **`RepairWindow` (복원 윈도우):**
+    - 내부 콘텐츠 영역에 단일 실행 앱 아이콘이 배치된다. 현재 휴지통 프리팹은 표시 이름 `WINDOW.exe`와 `Assets/Art/Icon/wndow.png` Sprite를 사용하고 실행 대상은 `lock-warning`다. 생성 도구도 같은 대상과 등록을 사용한다.
+    - 예전 Notepad 검증용 `Primary/Text`는 휴지통 프리팹에서 제거한다. Primary 배경은 흰색이며 Secondary에는 사용자 지정 `Assets/Art/Screen/Window_Bin.png`의 기존 Sprite를 연결한다. 이름이 같은 확장자 없는 `Art/Icon/Window_Bin` 그림은 이 배경으로 사용하지 않는다. FolderWindow 초기화는 지정된 Secondary Sprite를 보존하고 미할당일 때만 흰 배경을 사용한다. 두 배경 모두 크기 변경을 따르며 아이콘·이름은 배경보다 앞에 그린다. 투시용 그림이 있을 때 Secondary의 파일 이름은 흰색으로 표시하고 일반 화면의 검은 이름은 유지한다. 생성 도구도 같은 휴지통 구성을 사용한다.
+    - 별도 선택 상태 없이, 해당 앱 아이콘을 **더블클릭**하면 `WindowManager.Instance.Open("lock-warning")`가 호출되어 권한 경고가 열린다.
+  - **`LockWarningWindow` (현재 권한 경고):**
+    - `LockWarningWindow.prefab`의 일반 화면은 Warning/Lock_0와 Unlock_0를 사용한다. `initialRevealSprite`에는 Warning/Lock-rusted-bloody_0, `secondRevealSprite`에는 Warning/Unlock-rusted-bloody_0를 연결해 WINDOW.exe의 Secondary 캡처에 표시한다. 기존 `repair` 등록은 새 경고 등록으로 대체했다. 원본과 투시용 그림의 주 슬라이스·Pivot·배율이 같아 창/버튼/자물쇠 영역이 일치한다. 각 투시용 그림은 해당 단계의 원래 일반 그림을 표시할 때만 적용하며, 미할당 또는 별도 그림 교체 시에는 기존처럼 일반 그림을 재사용한다. 열쇠 사용 후 InitializeVisuals로 갱신해도 두 그림을 유지한다.
+    - 그림 안에 제목바·X·확인 버튼이 있으므로 기본 제목바/테두리/크기 조절 손잡이를 숨기고 BarHeight=0으로 처리한다. Window의 기본 동작은 유지하며 이미지 창에 한해 가상 BarHeight/ButtonAt/TitleContains와 기존 ResizeAt/Hit를 재정의한다. 그림의 제목바로 이동하며 X/확인은 기존 입력 라우터의 RequestClose로 전달한다. 재정의한 RequestClose는 Lock에서 일반 닫기, Unlock에서 BossEntryRequested 신호로 분기한다.
+    - 열쇠는 주 스프라이트 안의 정규화 영역 `(0.095,0.42,0.105,0.34)`에서만 받는다. 표시 변환을 거꾸로 적용하므로 위치·표시 크기에 맞춰 판정이 따라간다. 성공 시 열쇠 소모·OnKeyUsed 1회·Unlock 이미지 전환을 유지하고 외형 갱신 후에도 해제 상태를 보존한다.
+    - Desktop 씬의 `LockWarningBossEntry`는 새로 열린 권한 경고에 구독한다. Unlock 버튼 요청을 한 번 수락하면 WindowManager 잠금과 DesktopInputRouter 세션으로 추가 조작을 막고, 포커스/앱 일시 중단을 제외한 3초 뒤 같은 씬의 BossFightController.BeginBossFight를 호출한다. 직접 Mouse를 조회하던 열쇠·폴더·엿보기·인터넷 총 클릭도 `DesktopInputRouter.IsWorldInputBlocked`를 확인해 세션 뒤에서 작동하지 않게 한다. 열쇠 사용 이벤트에서는 타이머를 시작하지 않는다. 인계 직전에 자신의 잠금을 해제해 BossDesktopSession의 입력 소유권과 충돌하지 않으며, 진입 실패/비활성화 시 원래 Unlock 화면과 입력을 복구한다.
+    - `BossEntryBackdrop`은 확인 프레임 끝에 화면을 캡처한다. CRT Canvas를 캡처 프레임에만 제외해 효과 중복을 막으며, 작업표시줄까지 포함한 스냅샷을 유지하는 동안 실제 작업표시줄 Canvas는 숨긴다. 대기 중에는 최상위 WindowFront, 보스전 진입 중에는 Background 순서 3으로 표시한다. One_more 종료 경계(`EntryPreludeSeconds + EntryWarningSeconds`) 또는 정리 때 스냅샷·Sprite·오브젝트를 해제하고 작업표시줄을 복구한다. 그 뒤 검은 배경·1초 대기·2초 터미널 출력·조작 시작의 기존 순서를 따른다. 진입 컨텍스트의 Backdrop 소유권은 성공 시 전투 표시로 이동한다.
+    - Desktop 씬에는 자동 시작하지 않는 BossFightController와 해당 연결 컴포넌트를 직렬화했다. 씬을 전체 재생성한 경우 `WINDOW.exe/Boss Fight/Connect Desktop Lock Warning` 메뉴를 실행하고 저장하면 현재 설정/프리팹을 재연결할 수 있다. 기존 검증 씬의 자동 진입은 유지한다. 규칙은 BOSS_FIGHT 1-2, 확인 범위는 체크리스트 39장을 따른다.
+  - **`RepairWindow` (이전 복원 화면의 호환 기반, 현재 미등록):**
     - 단일 이미지를 화면에 띄워주며, 향후 상호작용에 따라 이미지를 확장 교체(`SetSprite(Sprite)`)할 수 있는 창이다.
+    - 현재 `RepairWindow.prefab.initialSprite`는 제공된 `Assets/Art/Item/Lock.png`의 `Lock_0`, `initialRevealSprite`는 `Lock-rusted-bloody.png`의 `Lock-rusted-bloody_0` Sprite다. 단계 0에서 일반 이미지를 표시할 때만 Secondary에 투시용 그림을 사용하며 미할당이면 일반 그림을 재사용한다. 열쇠 사용 뒤와 별도 이미지 교체에는 같은 그림을 양쪽에 표시한다. 기존 `ImageWindow`/독립 열쇠의 복원 창 드롭 판정과 `TryUseKey`를 사용한다. 열쇠 사용 후 `secondSprite`와 후속 UnityEvent는 미할당 상태이며 기존 2단계 임시 표시·이벤트 발생 동작을 유지한다.
+    - 자물쇠의 그림 자체를 본문 중앙에 놓도록 각 Sprite의 Pivot을 맞췄다. 두 그림의 주 슬라이스는 같은 영역 `(96,49,1077,923)`을 사용하며 GUID·fileID·원본 PNG는 유지한다. Lock Pivot은 `(0.6239554,0.4956663)`, 변형 Pivot은 `(0.6234912,0.507584)`다. 창 크기 변경은 기존 종횡비 유지 배치를 따른다.
     - `WindowFront`와 `WindowBack` 듀얼 레이어 구조로 구성되어 `WINDOW.exe` 투시 연출 시에도 자연스럽게 렌더링된다.
     - **이미지 교체:** 초기 상태(`initialSprite`, Stage 0)에서 열쇠를 드롭하면 두 번째 이미지(`secondSprite`, Stage 1)로 전환되고 효과음 및 `OnKeyUsed` 이벤트가 호출된다. 이미지가 수동 할당되지 않았을 때에도 기본 내장 플레이스홀더 스프라이트를 생성하여 안전하게 렌더링된다.
 
@@ -1368,6 +1380,11 @@ Desktop 씬에서 `photos` 아이콘 오브젝트와 DesktopController 등록을
 ### 원격 main 추가 병합 — 2026-11-01
 
 main은 `80299e0`까지 반영하고 기존 미커밋 보스전·데스크톱 작업을 복원했다. `Window`의 양쪽 테두리 파괴 API와 로컬 GeometryConstraint, `InternetWindow.PointerLeftPressed(Vector2)` 입력 연결을 함께 유지한다. Desktop 씬의 `repair` 등록과 FolderWindow/RepairWindow/ExtractedKeyEntity도 원격 구현을 따른다. 이미지·이벤트 미할당과 검증 범위는 체크리스트 30·31장을 따른다. 이번 글꼴 충돌은 원본 폰트/동적 설정이 같음을 확인하고 로컬 glyph·atlas 캐시 전체를 유지했다. 복구용 stash와 디스크 사본을 보관하며 원래 미스테이징 상태를 유지한다.
+
+**현재 병합 기준은 `cdc5fbd`다.** 위 문단은 이전 병합 기록이며, 현재는 22장의 퀘스트와 19장의 인터넷 암호 잠금, 20장의 `lock-warning`/보스전 연결을 함께 유지한다. 원격 글꼴 에셋은 충돌 없이 전체를 반영했다. 인터넷의 직접 키보드/마우스 입력도 `DesktopInputRouter.IsWorldInputBlocked`를 확인하고, 검색 캡처 시험은 실제 비밀번호 입력 API로 먼저 해제한다. 문서의 중복 체크리스트 번호는 로컬 기존 번호를 유지하고 원격 내용을 40·41장으로 옮겼다. 백업·검증 상태는 체크리스트 42장에서 관리한다.
+
+`InternetWindow.PointerLeftPressed(Vector2)`의 좌표는 화면 픽셀이다. `GetKeypadButtonWorldRect`가 돌려주는 월드 좌표를 전달할 때에는 카메라의 `WorldToScreenPoint`로 변환한다. 키패드 회귀 시험도 하노이 입력 시험과 같은 좌표 계약을 사용한다.
+
 
 ## 22. 데스크톱 메인 퀘스트 시퀀스 디렉터 (`DesktopQuestDirector`)
 

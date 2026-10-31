@@ -133,13 +133,20 @@ namespace WindowExe.Desktop.Editor
             }
             EnsureTypography(font);
             var ids=new[]{"recycle-bin","memo","photos","internet"};
-            var body=new[]{"휴지통\n검증용 창입니다. 삭제 퍼즐은 아직 연결되지 않았습니다.","메모\n창을 움직이고 크기를 조절해 보세요.\n작업 표시줄로 최소화한 창을 복원할 수 있습니다.","사진","인터넷\n검증용 안내 창입니다. 실제 웹 탐색 기능은 제공하지 않습니다."};
-            var entries=new WindowPrefabEntry[ids.Length];
+            var body=new[]{"","메모\n창을 움직이고 크기를 조절해 보세요.\n작업 표시줄로 최소화한 창을 복원할 수 있습니다.","사진","인터넷\n검증용 안내 창입니다. 실제 웹 탐색 기능은 제공하지 않습니다."};
+            var entries=new WindowPrefabEntry[ids.Length+1];
             for(var i=0;i<ids.Length;i++)
             {
                 var definition=AssetDatabase.LoadAssetAtPath<DesktopItemDefinition>(Data+"/"+ids[i]+".asset");
                 var go=new GameObject("Window_"+ids[i]); go.SetActive(false);
-                W window=i==2?(W)go.AddComponent<ImageWindow>():go.AddComponent<NotepadWindow>();
+                W window=i==0?(W)go.AddComponent<FolderWindow>():i==2?(W)go.AddComponent<ImageWindow>():go.AddComponent<NotepadWindow>();
+                if(window is FolderWindow folder)
+                {
+                    folder.ExecutableItemName="WINDOW.exe";
+                    folder.TargetExecutableWindowId=LockWarningWindow.ContentId;
+                    folder.ExecutableItemIcon=AssetDatabase.LoadAllAssetsAtPath("Assets/Art/Icon/wndow.png").OfType<Sprite>().FirstOrDefault();
+                    folder.SetSecondarySprite(AssetDatabase.LoadAllAssetsAtPath("Assets/Art/Screen/Window_Bin.png").OfType<Sprite>().FirstOrDefault());
+                }
                 window.ConfigureAppearance(definition.DisplayName,definition.Icon,font);
                 if(window is NotepadWindow note) { note.SetBackgroundSprite(white); note.SetText(body[i]); }
                 if(window is ImageWindow image) image.SetPrimarySprite(definition.Icon);
@@ -150,6 +157,9 @@ namespace WindowExe.Desktop.Editor
                 UnityEngine.Object.DestroyImmediate(go);
                 entries[i]=new WindowPrefabEntry{id=ids[i],prefab=saved.GetComponent<W>()};
             }
+            var warning=AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs+"/LockWarningWindow.prefab");
+            if(warning==null) throw new System.InvalidOperationException("Lock warning prefab is missing.");
+            entries[ids.Length]=new WindowPrefabEntry{id=LockWarningWindow.ContentId,prefab=warning.GetComponent<LockWarningWindow>()};
             if(AssetDatabase.LoadAssetAtPath<Sprite>(Data+"/WindowWhite.asset")!=null) AssetDatabase.DeleteAsset(Data+"/WindowWhite.asset");
             EditorUtility.SetDirty(font); AssetDatabase.SaveAssets();
             return entries;

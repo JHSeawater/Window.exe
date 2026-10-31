@@ -189,6 +189,7 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void Update()
         {
+            if (DesktopInputRouter.IsWorldInputBlocked) return;
             if (IsConsumed || Mouse.current == null) return;
 
             Vector2 screenPos = Mouse.current.position.ReadValue();

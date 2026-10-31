@@ -1050,6 +1050,7 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void Update()
         {
+            if (DesktopInputRouter.IsWorldInputBlocked) return;
             ManualTick(Time.unscaledDeltaTime);
 
             if (!IsBorderBroken || IsKeyConsumed || Mouse.current == null)

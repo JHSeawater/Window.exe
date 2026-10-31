@@ -52,14 +52,15 @@ MonoBehaviour:
   canMinimize: 1
   isModal: 0
   ownerWindowId: 
-  size: {x: 5.5, y: 4.0}
-  minSize: {x: 3.0, y: 2.0}
+  size: {x: 5.5, y: 4}
+  minSize: {x: 3, y: 2}
   maxSize: {x: 20, y: 20}
   showBorder: 1
   borderThickness: 0.06
   borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
   borderSprite: {fileID: 0}
-  initialSprite: {fileID: 0}
+  initialSprite: {fileID: -5620155193319629329, guid: 2d98cfcc1bfed704b840c7499a3ff0f7, type: 3}
+  initialRevealSprite: {fileID: 1111184749719624362, guid: 9025dac7ff86c374d8ad991aa360b4fa, type: 3}
   secondSprite: {fileID: 0}
   consumeKeyOnUse: 1
   keyUsedClip: {fileID: 0}
@@ -70,4 +71,3 @@ MonoBehaviour:
   onImageChanged:
     m_PersistentCalls:
       m_Calls: []
-

@@ -1,0 +1,613 @@
+fileFormatVersion: 2
+guid: 9025dac7ff86c374d8ad991aa360b4fa
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1111184749719624362
+    second: Lock-rusted-bloody_0
+  - first:
+      213: 2255922401572377231
+    second: Lock-rusted-bloody_1
+  - first:
+      213: -7976859735429029255
+    second: Lock-rusted-bloody_2
+  - first:
+      213: 7333462062616005695
+    second: Lock-rusted-bloody_3
+  - first:
+      213: 2961682562222064258
+    second: Lock-rusted-bloody_4
+  - first:
+      213: -380609347921144066
+    second: Lock-rusted-bloody_5
+  - first:
+      213: -2091116584769178838
+    second: Lock-rusted-bloody_6
+  - first:
+      213: -5128298278348289201
+    second: Lock-rusted-bloody_7
+  - first:
+      213: 4535997675297469471
+    second: Lock-rusted-bloody_8
+  - first:
+      213: -2179270630955826432
+    second: Lock-rusted-bloody_9
+  - first:
+      213: 4773270665661766784
+    second: Lock-rusted-bloody_10
+  - first:
+      213: 4157212830461036253
+    second: Lock-rusted-bloody_11
+  - first:
+      213: 7575789809297156643
+    second: Lock-rusted-bloody_12
+  - first:
+      213: -5082044772256316419
+    second: Lock-rusted-bloody_13
+  - first:
+      213: -1587057486788268522
+    second: Lock-rusted-bloody_14
+  - first:
+      213: -3938303135946451831
+    second: Lock-rusted-bloody_15
+  - first:
+      213: 5864582411098122984
+    second: Lock-rusted-bloody_16
+  - first:
+      213: -8108740271504725139
+    second: Lock-rusted-bloody_17
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_0
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 49
+        width: 1077
+        height: 923
+      alignment: 9
+      pivot: {x: 0.6234912, y: 0.507584}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aaa9ede74a8bb6f00800000000000000
+      internalID: 1111184749719624362
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_1
+      rect:
+        serializedVersion: 2
+        x: 574
+        y: 991
+        width: 23
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f82519ac875ae4f10800000000000000
+      internalID: 2255922401572377231
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_2
+      rect:
+        serializedVersion: 2
+        x: 592
+        y: 1009
+        width: 34
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 972e2a675508c4190800000000000000
+      internalID: -7976859735429029255
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_3
+      rect:
+        serializedVersion: 2
+        x: 592
+        y: 1011
+        width: 13
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3cc70044e0b5c560800000000000000
+      internalID: 7333462062616005695
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_4
+      rect:
+        serializedVersion: 2
+        x: 696
+        y: 991
+        width: 15
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 28207b249920a1920800000000000000
+      internalID: 2961682562222064258
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_5
+      rect:
+        serializedVersion: 2
+        x: 720
+        y: 991
+        width: 13
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef697fa80ddc7baf0800000000000000
+      internalID: -380609347921144066
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_6
+      rect:
+        serializedVersion: 2
+        x: 736
+        y: 989
+        width: 39
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a23b7ec9b8cdaf2e0800000000000000
+      internalID: -2091116584769178838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_7
+      rect:
+        serializedVersion: 2
+        x: 851
+        y: 1001
+        width: 30
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f4b8dc003ef94d8b0800000000000000
+      internalID: -5128298278348289201
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_8
+      rect:
+        serializedVersion: 2
+        x: 906
+        y: 967
+        width: 31
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f147a1a5ad913fe30800000000000000
+      internalID: 4535997675297469471
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_9
+      rect:
+        serializedVersion: 2
+        x: 864
+        y: 994
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 003cf6c48eca1c1e0800000000000000
+      internalID: -2179270630955826432
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_10
+      rect:
+        serializedVersion: 2
+        x: 889
+        y: 969
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08cdf8b61601e3240800000000000000
+      internalID: 4773270665661766784
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_11
+      rect:
+        serializedVersion: 2
+        x: 946
+        y: 943
+        width: 13
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd6835f1b0361b930800000000000000
+      internalID: 4157212830461036253
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_12
+      rect:
+        serializedVersion: 2
+        x: 358
+        y: 527
+        width: 9
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 32a6e2c71bc922960800000000000000
+      internalID: 7575789809297156643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_13
+      rect:
+        serializedVersion: 2
+        x: 350
+        y: 127
+        width: 17
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df308099433f879b0800000000000000
+      internalID: -5082044772256316419
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_14
+      rect:
+        serializedVersion: 2
+        x: 392
+        y: 143
+        width: 6
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 61e6cd5df93a9f9e0800000000000000
+      internalID: -1587057486788268522
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_15
+      rect:
+        serializedVersion: 2
+        x: 362
+        y: 124
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 984da14f9265859c0800000000000000
+      internalID: -3938303135946451831
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_16
+      rect:
+        serializedVersion: 2
+        x: 464
+        y: 35
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8eae18981ae236150800000000000000
+      internalID: 5864582411098122984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Lock-rusted-bloody_17
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 48
+        width: 11
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6b6e0d5fa7f77f80800000000000000
+      internalID: -8108740271504725139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Lock-rusted-bloody_0: 1111184749719624362
+      Lock-rusted-bloody_1: 2255922401572377231
+      Lock-rusted-bloody_10: 4773270665661766784
+      Lock-rusted-bloody_11: 4157212830461036253
+      Lock-rusted-bloody_12: 7575789809297156643
+      Lock-rusted-bloody_13: -5082044772256316419
+      Lock-rusted-bloody_14: -1587057486788268522
+      Lock-rusted-bloody_15: -3938303135946451831
+      Lock-rusted-bloody_16: 5864582411098122984
+      Lock-rusted-bloody_17: -8108740271504725139
+      Lock-rusted-bloody_2: -7976859735429029255
+      Lock-rusted-bloody_3: 7333462062616005695
+      Lock-rusted-bloody_4: 2961682562222064258
+      Lock-rusted-bloody_5: -380609347921144066
+      Lock-rusted-bloody_6: -2091116584769178838
+      Lock-rusted-bloody_7: -5128298278348289201
+      Lock-rusted-bloody_8: 4535997675297469471
+      Lock-rusted-bloody_9: -2179270630955826432
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

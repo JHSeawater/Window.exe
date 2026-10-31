@@ -16,8 +16,14 @@ namespace WindowExe.Desktop.Desktop.Window
         [Tooltip("복원 창의 초기 1단계 이미지")]
         [SerializeField] private Sprite initialSprite;
 
+        [Tooltip("초기 자물쇠를 WINDOW.exe로 비췄을 때의 이미지. 미할당이면 일반 이미지와 동일하게 표시")]
+        [SerializeField] private Sprite initialRevealSprite;
+
         [Tooltip("열쇠를 사용했을 때 교체되는 2단계 복원 이미지")]
         [SerializeField] private Sprite secondSprite;
+
+        [Tooltip("해제된 자물쇠를 WINDOW.exe로 비췄을 때의 이미지. 미할당이면 일반 이미지와 동일하게 표시")]
+        [SerializeField] private Sprite secondRevealSprite;
 
         [Header("Behavior Settings")]
         [Tooltip("열쇠를 복원 창에 사용했을 때 열쇠를 소모(파괴)할지 여부 (기본값: true)")]
@@ -76,7 +82,9 @@ namespace WindowExe.Desktop.Desktop.Window
         {
             SetupImageRenderers();
 
-            Sprite spriteToUse = initialSprite != null ? initialSprite : GetFallbackInitialSprite();
+            Sprite spriteToUse = CurrentStage == 0
+                ? (initialSprite != null ? initialSprite : GetFallbackInitialSprite())
+                : (currentSprite != null ? currentSprite : secondSprite != null ? secondSprite : GetFallbackSecondSprite());
             ApplySprite(spriteToUse);
         }
 
@@ -146,8 +154,11 @@ namespace WindowExe.Desktop.Desktop.Window
 
             if (backImageRenderer != null)
             {
-                backImageRenderer.sprite = sprite;
-                backImageRenderer.enabled = sprite != null;
+                var revealSprite = CurrentStage == 0 && sprite == initialSprite ? initialRevealSprite
+                    : CurrentStage == 1 && sprite == secondSprite ? secondRevealSprite : null;
+                var backSprite = revealSprite != null ? revealSprite : sprite;
+                backImageRenderer.sprite = backSprite;
+                backImageRenderer.enabled = backSprite != null;
             }
 
             UpdateImageLayout(size);
@@ -265,12 +276,14 @@ namespace WindowExe.Desktop.Desktop.Window
 
         public static Rect? OverrideRepairWindowWorldRect { get; set; }
 
+        public virtual bool CanUseKeyAt(Vector2 worldPos) => CurrentStage == 0 && OuterBounds.Contains(worldPos);
+
         public static RepairWindow FindRepairWindowAt(Vector2 worldPos, WindowManager wm = null)
         {
             if (OverrideActiveRepairWindow != null && OverrideActiveRepairWindow.gameObject.activeInHierarchy)
             {
                 Rect b = OverrideRepairWindowWorldRect.HasValue ? OverrideRepairWindowWorldRect.Value : OverrideActiveRepairWindow.OuterBounds;
-                if (b.Contains(worldPos))
+                if (b.Contains(worldPos) && (OverrideRepairWindowWorldRect.HasValue || OverrideActiveRepairWindow.CanUseKeyAt(worldPos)))
                     return OverrideActiveRepairWindow;
             }
 
@@ -285,7 +298,7 @@ namespace WindowExe.Desktop.Desktop.Window
                     if (proc.Instance is RepairWindow rw && rw.gameObject.activeInHierarchy)
                     {
                         Rect b = OverrideRepairWindowWorldRect.HasValue ? OverrideRepairWindowWorldRect.Value : rw.OuterBounds;
-                        if (b.Contains(worldPos))
+                        if (b.Contains(worldPos) && (OverrideRepairWindowWorldRect.HasValue || rw.CanUseKeyAt(worldPos)))
                             return rw;
                     }
                 }
@@ -297,7 +310,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 if (rw != null && rw.gameObject.activeInHierarchy)
                 {
                     Rect b = OverrideRepairWindowWorldRect.HasValue ? OverrideRepairWindowWorldRect.Value : rw.OuterBounds;
-                    if (b.Contains(worldPos))
+                    if (b.Contains(worldPos) && (OverrideRepairWindowWorldRect.HasValue || rw.CanUseKeyAt(worldPos)))
                         return rw;
                 }
             }

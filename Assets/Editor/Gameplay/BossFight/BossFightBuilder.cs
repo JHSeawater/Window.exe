@@ -8,6 +8,23 @@ namespace WindowExe.BossFight.Editor
 {
     public static class BossFightBuilder
     {
+        [MenuItem("WINDOW.exe/Boss Fight/Connect Desktop Lock Warning")]
+        public static void ConnectDesktopLockWarning()
+        {
+            if(EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("Exit Play Mode first.");
+            var scene=SceneManager.GetActiveScene();
+            if(scene.path!="Assets/Scenes/Desktop.unity") throw new System.InvalidOperationException("Open Desktop.unity first.");
+            var rules=AssetDatabase.LoadAssetAtPath<BossFightSettings>("Assets/Data/Gameplay/BossFight/BossFightSettings.asset");
+            var prefab=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Gameplay/BossFight/BossFightWindow.prefab");
+            if(rules==null || prefab==null) throw new System.InvalidOperationException("Boss settings/prefab missing.");
+            var bridge=Object.FindFirstObjectByType<LockWarningBossEntry>();
+            var root=bridge!=null?bridge.gameObject:new GameObject("Lock warning boss entry");
+            var controller=root.GetComponent<BossFightController>()??root.AddComponent<BossFightController>();
+            controller.ConfigureFullFight(rules,prefab.GetComponent<BossFightWindow>());
+            if(bridge==null)bridge=root.AddComponent<LockWarningBossEntry>();
+            bridge.Configure(controller);
+            EditorSceneManager.MarkSceneDirty(scene);
+        }
         [MenuItem("WINDOW.exe/Boss Fight/Create Full Fight Validation Scene")]
         public static void CreateFullValidation()
         {
@@ -83,6 +100,13 @@ namespace WindowExe.BossFight.Editor
             var scene=EditorSceneManager.OpenScene("Assets/Scenes/Desktop.unity");
             EditorSceneManager.SaveScene(scene,"Assets/Scenes/BossFightValidation.unity",true);
             scene=EditorSceneManager.OpenScene("Assets/Scenes/BossFightValidation.unity");
+            // Desktop now carries a real entry controller; validation owns a separate auto-start session.
+            foreach(var entry in Object.FindObjectsByType<LockWarningBossEntry>(FindObjectsInactive.Include))
+            {
+                var desktopFight=entry.GetComponent<BossFightController>();
+                if(desktopFight!=null)Object.DestroyImmediate(desktopFight);
+                Object.DestroyImmediate(entry);
+            }
             new GameObject("Boss Fight Session").AddComponent<BossFightController>().Configure(rules,prefab.GetComponent<BossFightWindow>(),true);
             EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssetIfDirty(rules);
         }

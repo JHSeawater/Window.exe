@@ -35,6 +35,7 @@ namespace WindowExe.BossFight
         private readonly SpriteRenderer entryPanel;
         private readonly Renderer[] windowRenderers;
         private bool entryWindowHidden;
+        private BossEntryBackdrop entryBackdrop;
         private SpriteRenderer[] transitionDosWindows;
         private SpriteRenderer[] entryEyeWindows;
         private GameObject entryDownloadRoot;
@@ -66,9 +67,11 @@ namespace WindowExe.BossFight
         private bool returning;
         private double lastTime;
         private int attempt=-1;
-        public BossFightPresentation(BossDesktopSession session,BossFightSettings settings,TaskbarController taskbar)
+        public BossFightPresentation(BossDesktopSession session,BossFightSettings settings,TaskbarController taskbar,BossEntryBackdrop backdrop=null)
         {
             this.session=session; this.settings=settings;
+            entryBackdrop=backdrop;
+            entryBackdrop?.ShowBehindEntry();
             windowRenderers=session.View.GetComponentsInChildren<Renderer>(true);
             root=new GameObject("Boss fight world");
             circleTexture=new Texture2D(64,64,TextureFormat.RGBA32,false) {name="Boss eye circle (Runtime)",filterMode=FilterMode.Bilinear};
@@ -174,6 +177,9 @@ namespace WindowExe.BossFight
         public void ShowTransition(bool value){errorPanel.enabled=value;if(errorText!=null)errorText.gameObject.SetActive(value);}
         public void Render(IBossFightModel model,TaskbarController taskbar,double entryAge=-1)
         {
+            if(entryAge<0 || entryAge>=settings.EntryPreludeSeconds+BossFightSettings.EntryWarningSeconds)
+            {entryBackdrop?.Dispose();entryBackdrop=null;}
+            else entryBackdrop?.FitCamera();
             var first=model as BossPhase1Model;
             if(first==null || !first.CombatLocked || first.TransitionAge<1.5) ClearTransitionDosWindows();
             if(!session.Space.Valid || session.View==null) return;
@@ -476,6 +482,7 @@ namespace WindowExe.BossFight
         }
         public void Dispose()
         {
+            entryBackdrop?.Dispose();entryBackdrop=null;
             if(entryWindowHidden)foreach(var renderer in windowRenderers)if(renderer!=null)renderer.forceRenderingOff=false;
             ClearTransitionDosWindows();
             ClearEntryWindows();

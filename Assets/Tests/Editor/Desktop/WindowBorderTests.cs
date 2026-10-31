@@ -29,6 +29,74 @@ namespace WindowExe.Desktop.Tests
         }
 
         [Test]
+        public void LockWarningAcceptsOnlyPadlockAndKeepsUnlockAfterRefresh()
+        {
+            var go = new GameObject("LockWarningTest");
+            try
+            {
+                var warning = go.AddComponent<LockWarningWindow>();
+                var lockSprite = RepairWindow.GetFallbackInitialSprite();
+                var unlockSprite = RepairWindow.GetFallbackSecondSprite();
+                warning.InitialSprite = lockSprite;
+                warning.SecondSprite = unlockSprite;
+                warning.InitializeVisuals();
+                warning.ApplyGeometry(Vector2.zero, new Vector2(14, 5.2f));
+                var textPoint = warning.ImageToWorld(new Vector2(.55f, .55f));
+                Assert.IsFalse(warning.CanUseKeyAt(textPoint), "Message text must not accept a key.");
+                Assert.IsNull(RepairWindow.FindRepairWindowAt(textPoint));
+                Assert.AreSame(warning, RepairWindow.FindRepairWindowAt(warning.KeyTargetCenter));
+                Assert.AreEqual(0, warning.BarHeight);
+                Assert.IsFalse(warning.transform.Find("TitleBar").gameObject.activeSelf);
+                int events = 0;
+                warning.OnKeyUsed += () => events++;
+                Assert.IsTrue(warning.TryUseKey());
+                Assert.AreEqual(1, events);
+                Assert.IsFalse(warning.TryUseKey());
+                warning.InitializeVisuals();
+                Assert.AreSame(unlockSprite, warning.FrontImageRenderer.sprite);
+                Assert.AreSame(unlockSprite, warning.BackImageRenderer.sprite);
+                Assert.IsFalse(warning.CanUseKeyAt(warning.KeyTargetCenter));
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Test]
+        public void LockWarningPrefabRevealsBothStagesWithoutChangingFrontOrHitTargets()
+        {
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Desktop/Windows/LockWarningWindow.prefab");
+            var go = Object.Instantiate(prefab);
+            try
+            {
+                var warning = go.GetComponent<LockWarningWindow>();
+                warning.InitializeVisuals();
+                warning.ApplyGeometry(new Vector2(1, -.5f), new Vector2(14, 5.2f));
+                void AssertImages(string name)
+                {
+                    Assert.AreEqual("Assets/Art/Warning/" + name + ".png",
+                        UnityEditor.AssetDatabase.GetAssetPath(warning.FrontImageRenderer.sprite));
+                    Assert.AreEqual("Assets/Art/Warning/" + name + "-rusted-bloody.png",
+                        UnityEditor.AssetDatabase.GetAssetPath(warning.BackImageRenderer.sprite));
+                    Assert.AreEqual(warning.FrontImageRenderer.sprite.rect, warning.BackImageRenderer.sprite.rect);
+                    Assert.AreEqual(warning.FrontImageRenderer.sprite.pivot, warning.BackImageRenderer.sprite.pivot);
+                    Assert.Less(Vector3.Distance(warning.FrontImageRenderer.bounds.center, warning.BackImageRenderer.bounds.center), .0001f);
+                    Assert.Less(Vector3.Distance(warning.FrontImageRenderer.bounds.size, warning.BackImageRenderer.bounds.size), .0001f);
+                }
+                AssertImages("Lock");
+                Assert.IsTrue(warning.CanUseKeyAt(warning.KeyTargetCenter));
+                Assert.AreEqual(2, warning.ButtonAt(warning.ImageToWorld(new Vector2(.49f, .31f))));
+                Assert.IsTrue(warning.TryUseKey());
+                AssertImages("Unlock");
+                warning.InitializeVisuals();
+                warning.ApplyGeometry(new Vector2(-1, 1), new Vector2(9, 4));
+                AssertImages("Unlock");
+                Assert.AreEqual(2, warning.ButtonAt(warning.ImageToWorld(new Vector2(.465f, .23f))));
+                Assert.AreEqual(2, warning.ButtonAt(warning.ImageToWorld(new Vector2(.885f, .805f))));
+                Assert.IsFalse(warning.TryUseKey());
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Test]
         public void BorderRendererIsInitializedOnPrimaryLayerWithCorrectDefaults()
         {
             var border = window.BorderRenderer;

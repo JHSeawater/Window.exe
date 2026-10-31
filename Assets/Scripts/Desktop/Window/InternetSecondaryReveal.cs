@@ -401,6 +401,7 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void CheckGunClick()
         {
+            if (DesktopInputRouter.IsWorldInputBlocked) return;
             if (!revealed)
                 return;
 

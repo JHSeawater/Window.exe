@@ -206,6 +206,7 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void Update()
         {
+            if (DesktopInputRouter.IsWorldInputBlocked) return;
             if (isCleared || isGameOver) return;
 
             ManualTick(Time.deltaTime);

@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace WindowExe.Desktop.Desktop.Window
 {
-    /// <summary>A screen-aligned backdrop and the visible windows' Secondary sprites, for WINDOW.exe only.</summary>
+    /// <summary>A screen-aligned backdrop and visible Secondary sprites/text, for WINDOW.exe only.</summary>
     [DisallowMultipleComponent, RequireComponent(typeof(WindowExeWindow))]
     public sealed class WindowDesktopCapture : MonoBehaviour
     {
@@ -20,8 +21,10 @@ namespace WindowExe.Desktop.Desktop.Window
         private MaterialPropertyBlock spriteProperties;
         private DesktopController desktop;
         private readonly Dictionary<Sprite, Mesh> meshes = new Dictionary<Sprite, Mesh>();
-        private readonly List<SpriteRenderer> sprites = new List<SpriteRenderer>();
-        private readonly List<SpriteRenderer> sortedSprites = new List<SpriteRenderer>();
+        private readonly List<Renderer> renderers = new List<Renderer>();
+        private readonly List<Renderer> sortedRenderers = new List<Renderer>();
+        private readonly List<TextMeshPro> labels = new List<TextMeshPro>();
+        private readonly List<Material> textMaterials = new List<Material>();
         public Texture2D DesktopBackground => desktopBackground;
         public RenderTexture CaptureTexture => texture;
 
@@ -72,7 +75,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 { name = "WINDOW.exe Secondary Capture", hideFlags = HideFlags.HideAndDontSave };
             if (commands == null) commands = new CommandBuffer { name = "WINDOW.exe Desktop Reveal" };
 
-            sortedSprites.Clear();
+            sortedRenderers.Clear();
             var manager = WindowManager.Instance;
             if (manager != null)
                 foreach (var process in manager.DisplayOrder)
@@ -81,14 +84,30 @@ namespace WindowExe.Desktop.Desktop.Window
                     if (window == null || !window.gameObject.activeInHierarchy) continue;
                     var secondary = window.transform.Find("Secondary");
                     if (secondary == null) continue;
-                    sprites.Clear();
-                    secondary.GetComponentsInChildren(false, sprites);
-                    foreach (var sprite in sprites)
-                        if (sprite.enabled && sprite.sprite != null && !sprite.forceRenderingOff
-                            && (camera.cullingMask & (1 << sprite.gameObject.layer)) != 0)
-                            sortedSprites.Add(sprite);
+                    // TMP normally rebuilds before camera rendering. Update changed labels here too,
+                    // since this private capture can run before TMP's normal render callback.
+                    labels.Clear();
+                    secondary.GetComponentsInChildren(false, labels);
+                    foreach (var label in labels)
+                        if (label.isActiveAndEnabled && label.havePropertiesChanged)
+                            label.ForceMeshUpdate();
+                    renderers.Clear();
+                    secondary.GetComponentsInChildren(false, renderers);
+                    foreach (var renderer in renderers)
+                    {
+                        if (!renderer.enabled || renderer.forceRenderingOff
+                            || (camera.cullingMask & (1 << renderer.gameObject.layer)) == 0) continue;
+                        if (renderer is SpriteRenderer sprite)
+                        {
+                            if (sprite.sprite != null) sortedRenderers.Add(sprite);
+                        }
+                        else if (renderer is MeshRenderer
+                            && (renderer.GetComponent<TextMeshPro>() != null
+                                || renderer.GetComponent<TMP_SubMesh>() != null))
+                            sortedRenderers.Add(renderer);
+                    }
                 }
-            sortedSprites.Sort(CompareSprites);
+            sortedRenderers.Sort(CompareRenderers);
 
             var previous = RenderTexture.active;
             try
@@ -102,7 +121,11 @@ namespace WindowExe.Desktop.Desktop.Window
                 commands.SetViewProjectionMatrices(camera.worldToCameraMatrix,
                     // The consumer uses bottom-left screen UVs, just like the backdrop blit.
                     GL.GetGPUProjectionMatrix(camera.projectionMatrix, false));
-                foreach (var sprite in sortedSprites) DrawSprite(sprite);
+                foreach (var renderer in sortedRenderers)
+                {
+                    if (renderer is SpriteRenderer sprite) DrawSprite(sprite);
+                    else DrawText(renderer);
+                }
                 Graphics.ExecuteCommandBuffer(commands);
             }
             finally { RenderTexture.active = previous; }
@@ -112,11 +135,22 @@ namespace WindowExe.Desktop.Desktop.Window
             owner.ViewportRenderer.SetPropertyBlock(properties);
         }
 
-        private static int CompareSprites(SpriteRenderer left, SpriteRenderer right)
+        private static int CompareRenderers(Renderer left, Renderer right)
         {
             var layer = SortingLayer.GetLayerValueFromID(left.sortingLayerID)
                 .CompareTo(SortingLayer.GetLayerValueFromID(right.sortingLayerID));
             return layer != 0 ? layer : left.sortingOrder.CompareTo(right.sortingOrder);
+        }
+
+        private void DrawText(Renderer renderer)
+        {
+            var filter = renderer.GetComponent<MeshFilter>();
+            if (filter == null || filter.sharedMesh == null || filter.sharedMesh.vertexCount == 0) return;
+            textMaterials.Clear();
+            renderer.GetSharedMaterials(textMaterials);
+            for (var submesh = 0; submesh < filter.sharedMesh.subMeshCount && submesh < textMaterials.Count; submesh++)
+                if (textMaterials[submesh] != null)
+                    commands.DrawRenderer(renderer, textMaterials[submesh], submesh, 0);
         }
 
         private void DrawSprite(SpriteRenderer renderer)
@@ -241,8 +275,10 @@ namespace WindowExe.Desktop.Desktop.Window
             commands = null;
             foreach (var mesh in meshes.Values) if (mesh != null) DestroyOwned(mesh);
             meshes.Clear();
-            sprites.Clear();
-            sortedSprites.Clear();
+            renderers.Clear();
+            sortedRenderers.Clear();
+            labels.Clear();
+            textMaterials.Clear();
         }
 
         private static void DestroyOwned(Object value)

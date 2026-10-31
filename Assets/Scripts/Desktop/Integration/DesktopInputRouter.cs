@@ -29,6 +29,9 @@ namespace WindowExe.Desktop
         private IDesktopInputSession session;
         private object sessionOwner;
         public bool HasSession => session != null;
+        // Legacy world-space controls poll Mouse directly rather than receiving routed UI events.
+        public static bool IsWorldInputBlocked => Instance != null &&
+            (Instance.session != null || Instance.manager != null && Instance.manager.IsLocked);
         public bool TryBeginSession(object ownerToken, IDesktopInputSession value)
         {
             if (ownerToken == null || value == null || session != null) return false;

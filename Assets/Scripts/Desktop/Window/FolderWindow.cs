@@ -43,6 +43,7 @@ namespace WindowExe.Desktop.Desktop.Window
         private Transform backAppIconRoot;
         private SpriteRenderer primaryIconSr;
         private SpriteRenderer backIconSr;
+        private SpriteRenderer background;
         private TextMeshPro primaryLabel;
         private TextMeshPro backLabel;
         private AudioSource audioSource;
@@ -90,7 +91,42 @@ namespace WindowExe.Desktop.Desktop.Window
         protected override void InitializePrimary()
         {
             SetupAppIconComponents();
+            var primary = transform.Find("Primary");
+            var backgroundTransform = primary.Find("Background");
+            if (backgroundTransform == null)
+            {
+                backgroundTransform = new GameObject("Background").transform;
+                backgroundTransform.SetParent(primary, false);
+            }
+            background = backgroundTransform.GetComponent<SpriteRenderer>();
+            if (background == null) background = backgroundTransform.gameObject.AddComponent<SpriteRenderer>();
+            if (background.sprite == null) background.sprite = WindowTitleBar.WhiteSprite;
+            background.color = Color.white;
+            background.drawMode = SpriteDrawMode.Sliced;
+            background.size = size;
+            // Keep the prefab's reveal artwork; use white only when no Secondary is configured.
+            var secondary = transform.Find("Secondary").GetComponent<SpriteRenderer>();
+            if (secondary.sprite == null)
+                SetSecondarySprite(background.sprite);
+            SetSecondaryColor(Color.white);
+            backLabel.color = secondary.sprite == background.sprite ? Color.black : Color.white;
             ApplyIconLayout();
+        }
+
+        protected override void ApplySize(Vector2 value)
+        {
+            base.ApplySize(value);
+            if (background != null) background.size = value;
+        }
+
+        public override void ApplySorting(int order)
+        {
+            base.ApplySorting(order);
+            if (background != null) background.sortingOrder = order;
+            if (primaryIconSr != null) primaryIconSr.sortingOrder = order + 2;
+            if (backIconSr != null) backIconSr.sortingOrder = order + 2;
+            if (primaryLabel != null) primaryLabel.GetComponent<Renderer>().sortingOrder = order + 3;
+            if (backLabel != null) backLabel.GetComponent<Renderer>().sortingOrder = order + 3;
         }
 
         private void SetupAppIconComponents()
@@ -271,6 +307,7 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void Update()
         {
+            if (DesktopInputRouter.IsWorldInputBlocked) return;
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
                 return;
 

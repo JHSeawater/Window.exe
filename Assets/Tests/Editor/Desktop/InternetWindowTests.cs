@@ -591,20 +591,36 @@ namespace WindowExe.Desktop.Tests
             var freshInternet = manager.Open("internet") as InternetWindow;
             Assert.IsNotNull(freshInternet);
 
-            // 키패드 '1' 버튼 클릭
-            Rect btn1Rect = freshInternet.GetKeypadButtonWorldRect(0); // "1"
-            freshInternet.PointerLeftPressed(btn1Rect.center);
-            Assert.AreEqual("1", freshInternet.CurrentPasscodeInput);
-
-            // 키패드 '9' 버튼 클릭 (index 8)
-            Rect btn9Rect = freshInternet.GetKeypadButtonWorldRect(8); // "9"
-            freshInternet.PointerLeftPressed(btn9Rect.center);
-            Assert.AreEqual("19", freshInternet.CurrentPasscodeInput);
-
-            // 키패드 'C' 버튼 클릭 (index 9) -> 클리어
-            Rect btnCRect = freshInternet.GetKeypadButtonWorldRect(9); // "C"
-            freshInternet.PointerLeftPressed(btnCRect.center);
-            Assert.AreEqual(string.Empty, freshInternet.CurrentPasscodeInput);
+            GameObject cameraObject = null;
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                cameraObject = new GameObject("Keypad projection camera", typeof(Camera));
+                cameraObject.tag = "MainCamera";
+                camera = cameraObject.GetComponent<Camera>();
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0, 0, -10);
+            }
+            try
+            {
+                // PointerLeftPressed receives screen pixels, while button rects are in world units.
+                void ClickKeypad(int index)
+                {
+                    Vector2 point = freshInternet.GetKeypadButtonWorldRect(index).center;
+                    freshInternet.PointerLeftPressed(camera.WorldToScreenPoint(
+                        new Vector3(point.x, point.y, freshInternet.transform.position.z)));
+                }
+                ClickKeypad(0); // "1"
+                Assert.AreEqual("1", freshInternet.CurrentPasscodeInput);
+                ClickKeypad(8); // "9"
+                Assert.AreEqual("19", freshInternet.CurrentPasscodeInput);
+                ClickKeypad(9); // "C"
+                Assert.AreEqual(string.Empty, freshInternet.CurrentPasscodeInput);
+            }
+            finally
+            {
+                if (cameraObject != null) Object.DestroyImmediate(cameraObject);
+            }
         }
     }
 }

@@ -46,7 +46,7 @@ namespace WindowExe.Desktop.Desktop.Window
         public bool IsModal => isModal;
         public string OwnerWindowId => ownerWindowId;
         public Sprite TaskbarIcon => taskbarIcon;
-        public float BarHeight => titleBar != null ? titleBar.BarHeight : 0.5f;
+        public virtual float BarHeight => titleBar != null ? titleBar.BarHeight : 0.5f;
         public bool ShowBorder => showBorder;
         public float BorderThickness => borderThickness;
         public Color BorderColor => borderColor;
@@ -176,8 +176,8 @@ namespace WindowExe.Desktop.Desktop.Window
         public virtual void RequestMinimize() => manager?.TryRequest(this, WindowAction.Minimize);
         public virtual void RequestMaximize() => manager?.TryRequest(this, WindowAction.Maximize);
         public virtual bool IsPointerOverResizeHandle(Vector2 point) => resizeHandle != null && resizeHandle.IsPointerOverAnyHandle(point);
-        public int ButtonAt(Vector2 point) => titleBar != null ? titleBar.ButtonAt(point) : -1;
-        public bool TitleContains(Vector2 point) => titleBar != null && titleBar.Contains(point);
+        public virtual int ButtonAt(Vector2 point) => titleBar != null ? titleBar.ButtonAt(point) : -1;
+        public virtual bool TitleContains(Vector2 point) => titleBar != null && titleBar.Contains(point);
         public virtual bool Hit(Vector2 point) => OuterBounds.Contains(point) || IsPointerOverResizeHandle(point);
         public virtual ResizeDirection? ResizeAt(Vector2 point) => resizeHandle != null ? resizeHandle.DirectionAt(point) : null;
         public virtual void MoveTo(Vector2 position)

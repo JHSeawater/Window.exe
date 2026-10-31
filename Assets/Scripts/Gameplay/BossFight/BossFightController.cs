@@ -14,6 +14,8 @@ namespace WindowExe.BossFight
         public string RequestId;
         public bool StartAtPhase2;
         public CRTControlLease CrtControl;
+        // Ownership transfers to the fight only after entry succeeds.
+        public BossEntryBackdrop Backdrop;
     }
     public sealed class BossFightResult
     {
@@ -79,10 +81,10 @@ namespace WindowExe.BossFight
             error=null;
             if(context==null || string.IsNullOrEmpty(context.RequestId) || acceptedRequests.Contains(context.RequestId))
             {error="Missing or previously consumed entry request.";return false;}
-            if(!Begin(context.StartAtPhase2,out error,context.CrtControl))return false;
+            if(!Begin(context.StartAtPhase2,out error,context.CrtControl,context.Backdrop))return false;
             acceptedRequests.Add(context.RequestId);return true;
         }
-        private bool Begin(bool phase2,out string error,CRTControlLease incomingCrt=null)
+        private bool Begin(bool phase2,out string error,CRTControlLease incomingCrt=null,BossEntryBackdrop backdrop=null)
         {
             error=null;
             if(IsActive || settings==null || windowPrefab==null) { error="Already active or missing boss settings/prefab."; return false; }
@@ -104,7 +106,7 @@ namespace WindowExe.BossFight
                 session.Cancelled+=OnCancel; session.SpaceChanging+=OnSpaceChanging; session.Removed+=OnRemoved;
                 input.Timeline.Intent+=OnIntent;
                 session.View.SetTaskbarIcon(settings.bossSprite);
-                presentation=new BossFightPresentation(session,settings,taskbar);
+                presentation=new BossFightPresentation(session,settings,taskbar,backdrop);
                 crt=incomingCrt!=null?incomingCrt.Transfer():CRTOverlay.Instance?.AcquireControl();
                 crt?.SetBaseHorizontalNoise(settings.crtBaseScanlineScale,settings.crtBaseStreakScale,settings.crtBaseStreakDensityScale);
                 crt?.SetLevel(phase2?2:0);
