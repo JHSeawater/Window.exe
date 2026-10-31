@@ -4,234 +4,212 @@ using UnityEngine;
 
 namespace WindowExe.Desktop.Desktop.Window
 {
-    public enum WindowState
-    {
-        Normal,
-        Minimized,
-        Maximized
-    }
+    public enum WindowState { Normal, Minimized, Maximized }
+    public enum WindowAction { Activate, Restore, Minimize, Maximize, Close }
 
-    /// <summary>
-    /// 열린 창 프로세스 정보 (작업 표시줄 및 관리용 데이터)
-    /// </summary>
-    public class WindowProcess
+    public sealed class WindowProcess
     {
         public string Id { get; }
+        public string InstanceId { get; } = Guid.NewGuid().ToString("N");
         public string Title => Instance != null ? Instance.WindowTitle : Id;
         public Window Instance { get; }
-        public WindowState State { get; set; }
-
-        public WindowProcess(string id, Window instance)
-        {
-            Id = id;
-            Instance = instance;
-            State = WindowState.Normal;
-        }
+        public long CreationOrder { get; }
+        public WindowState State { get; internal set; }
+        internal WindowProcess(string id, Window instance, long order)
+        { Id = id; Instance = instance; CreationOrder = order; }
     }
+    [Serializable] public struct WindowPrefabEntry { public string id; public Window prefab; }
 
-    [Serializable]
-    public struct WindowPrefabEntry
-    {
-        public string id;
-        public Window prefab;
-    }
-
-    /// <summary>
-    /// 창 생성, 최소화, 보이기(Enshow), 닫기(Close), 프로세스 목록을 총괄하는 창 매니저
-    /// </summary>
     [DisallowMultipleComponent]
     public class WindowManager : MonoBehaviour
     {
         public static WindowManager Instance { get; private set; }
-
-        [Header("Registered Window Prefabs")]
         [SerializeField] private List<WindowPrefabEntry> registeredPrefabs = new List<WindowPrefabEntry>();
-
-        [Header("Hierarchy Root")]
         [SerializeField] private Transform windowRoot;
-
-        private readonly Dictionary<string, WindowProcess> _activeProcesses = new Dictionary<string, WindowProcess>();
-        private readonly List<WindowProcess> _processListCache = new List<WindowProcess>();
-
-        // 이벤트 (작업 표시줄 및 게임 시스템 연동용)
+        private readonly Dictionary<string, WindowProcess> processes = new Dictionary<string, WindowProcess>();
+        private readonly List<WindowProcess> stack = new List<WindowProcess>();
+        private long sequence;
+        private bool publishing, pending;
+        public string ActiveWindowId { get; private set; }
+        public bool IsLocked { get; private set; }
+        public bool HasModal => Modal()!=null;
+        public event Action Changed;
         public event Action<WindowProcess> OnProcessOpened;
         public event Action<string> OnProcessClosed;
         public event Action<WindowProcess> OnProcessStateChanged;
         public event Action<WindowProcess> OnProcessFocused;
-
-        /// <summary>
-        /// 현재 열려 있는 모든 창 프로세스 목록 (작업 표시줄에서 순회 접근 가능)
-        /// </summary>
-        public IReadOnlyList<WindowProcess> ActiveProcesses
+        public IReadOnlyList<WindowProcess> ActiveProcesses => new List<WindowProcess>(processes.Values).AsReadOnly();
+        public IReadOnlyList<WindowProcess> DisplayOrder => stack.AsReadOnly();
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatic() => Instance = null;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void RebindSession()
         {
-            get
-            {
-                _processListCache.Clear();
-                _processListCache.AddRange(_activeProcesses.Values);
-                return _processListCache;
-            }
+            if(Instance!=null) return;
+            foreach(var manager in UnityEngine.Object.FindObjectsByType<WindowManager>())
+                if(manager.isActiveAndEnabled) { Instance=manager; manager.ResetWindows(); break; }
         }
-
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
+            if (Instance != null && Instance != this) { enabled = false; return; }
             Instance = this;
-
             if (windowRoot == null) windowRoot = transform;
         }
-
-        /// <summary>
-        /// 창 열기: 이미 열려 있으면 맨 앞으로 포커스 및 복원(Enshow), 없으면 프리팹을 인스턴스화하여 생성
-        /// </summary>
+        private void OnDestroy() { processes.Clear(); stack.Clear(); ActiveWindowId=null; Changed?.Invoke(); if (Instance == this) Instance = null; }
+        public void Configure(Transform root, IEnumerable<WindowPrefabEntry> entries)
+        { windowRoot = root; registeredPrefabs = new List<WindowPrefabEntry>(entries); }
+        public void RegisterPrefab(string id, Window prefab) { registeredPrefabs.RemoveAll(x=>x.id==id); registeredPrefabs.Add(new WindowPrefabEntry{id=id,prefab=prefab}); }
+        public bool CanRequest(Window expected, WindowAction action)
+        {
+            if(IsLocked||!IsCurrent(expected)) return false;
+            var p=GetProcess(expected.WindowId); var modal=Modal();
+            if(modal!=null&&modal!=p && !((action==WindowAction.Activate||action==WindowAction.Restore)&&IsOwner(p,modal))) return false;
+            return action!=WindowAction.Minimize||expected.CanMinimize;
+        }
+        public WindowProcess GetProcess(string id) => id != null && processes.TryGetValue(id, out var p) ? p : null;
+        public WindowProcess FindInstance(string id)
+        { foreach (var p in processes.Values) if (p.InstanceId == id) return p; return null; }
+        public bool IsWindowOpen(string id) => GetProcess(id) != null;
+        public bool IsCurrent(Window w) => w != null && GetProcess(w.WindowId)?.Instance == w;
         public Window Open(string id)
         {
-            if (string.IsNullOrEmpty(id))
+            if (IsLocked || string.IsNullOrEmpty(id)) return null;
+            var existing = GetProcess(id);
+            if (existing != null) { TryRequest(existing.Instance, WindowAction.Restore); return existing.Instance; }
+            if (Modal() != null) return null;
+            Window prefab = null;
+            foreach (var entry in registeredPrefabs) if (entry.id == id) { prefab = entry.prefab; break; }
+            if (prefab == null) { Debug.LogWarning("Unregistered desktop content: " + id, this); return null; }
+            var w = Instantiate(prefab, windowRoot != null ? windowRoot : transform);
+            w.gameObject.SetActive(false);
+            w.InitializeVisuals();
+            w.Attach(this, id);
+            w.name = "Window_" + id;
+            var p = new WindowProcess(id, w, ++sequence);
+            processes.Add(id, p);
+            stack.Add(p);
+            w.gameObject.SetActive(true);
+            if (DesktopWindowSpace.Instance != null) w.ConstrainTo(DesktopWindowSpace.Instance.Bounds);
+            Focus(p);
+            // Commit all state before notifying observers; callbacks may close/reopen this item.
+            OnProcessOpened?.Invoke(p);
+            if (IsCurrent(w) && ActiveWindowId == p.InstanceId) OnProcessFocused?.Invoke(p);
+            Notify();
+            return IsCurrent(w) ? w : null;
+        }
+        public void Minimize(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Minimize);
+        public void Enshow(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Restore);
+        public void Close(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Close);
+        public void ToggleMaximize(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Maximize);
+        public void FocusWindow(string id) => TryRequest(GetProcess(id)?.Instance, WindowAction.Activate);
+        public bool TryRequest(Window expected, WindowAction action)
+        {
+            if (IsLocked || !IsCurrent(expected)) return false;
+            var p = GetProcess(expected.WindowId);
+            var modal = Modal();
+            if (modal != null && modal != p)
             {
-                Debug.LogError("[WindowManager] 열려는 창의 ID가 비어 있습니다!");
-                return null;
+                if ((action == WindowAction.Activate || action == WindowAction.Restore) && IsOwner(p, modal)) p = modal;
+                else return false;
             }
-
-            // 1. 이미 열려 있는 창인 경우 -> 복원 및 포커스
-            if (_activeProcesses.TryGetValue(id, out var existingProcess))
+            var w = p.Instance;
+            if (action == WindowAction.Minimize && !w.CanMinimize) return false;
+            if (action == WindowAction.Close)
             {
-                if (existingProcess.State == WindowState.Minimized)
-                {
-                    Enshow(id);
-                }
-                else
-                {
-                    FocusWindow(id);
-                }
-                return existingProcess.Instance;
+                Remove(p);
+                OnProcessClosed?.Invoke(p.Id);
+                Notify();
+                return true;
             }
-
-            // 2. 새 창 생성
-            Window prefab = FindPrefab(id);
-            if (prefab == null)
+            if (action == WindowAction.Minimize)
             {
-                Debug.LogError($"[WindowManager] ID '{id}'에 해당하는 등록된 창 프리팹을 찾을 수 없습니다! 인스펙터의 Registered Prefabs를 확인하세요.", this);
-                return null;
+                DesktopInputRouter.Instance?.CancelFor(w);
+                p.State = WindowState.Minimized;
+                w.gameObject.SetActive(false);
+                ChooseActive();
             }
-
-            Transform root = windowRoot != null ? windowRoot : transform;
-            Window newWindow = Instantiate(prefab, root);
-            newWindow.WindowId = id;
-            newWindow.gameObject.name = $"Window_{id}";
-
-            var process = new WindowProcess(id, newWindow);
-            _activeProcesses.Add(id, process);
-
-            FocusWindow(id);
-            OnProcessOpened?.Invoke(process);
-
-            return newWindow;
-        }
-
-        /// <summary>
-        /// 창 최소화: 창 GameObject를 비활성화(안 보이게)하고 상태를 Minimized로 변경
-        /// </summary>
-        public void Minimize(string id)
-        {
-            if (!_activeProcesses.TryGetValue(id, out var process)) return;
-            if (process.Instance == null) return;
-
-            process.Instance.gameObject.SetActive(false);
-            process.State = WindowState.Minimized;
-
-            OnProcessStateChanged?.Invoke(process);
-        }
-
-        /// <summary>
-        /// 창 보이기(Enshow): 최소화된 창을 다시 화면에 활성화하고 맨 앞으로 포커스
-        /// </summary>
-        public void Enshow(string id)
-        {
-            if (!_activeProcesses.TryGetValue(id, out var process)) return;
-            if (process.Instance == null) return;
-
-            process.Instance.gameObject.SetActive(true);
-            process.State = process.Instance.IsMaximized ? WindowState.Maximized : WindowState.Normal;
-
-            FocusWindow(id);
-            OnProcessStateChanged?.Invoke(process);
-        }
-
-        /// <summary>
-        /// 창 닫기: 창 인스턴스를 파괴하고 프로세스 목록에서 제거
-        /// </summary>
-        public void Close(string id)
-        {
-            if (!_activeProcesses.TryGetValue(id, out var process)) return;
-
-            _activeProcesses.Remove(id);
-
-            if (process.Instance != null)
+            else
             {
-                Destroy(process.Instance.gameObject);
+                if (action == WindowAction.Maximize && p.State == WindowState.Minimized) return false;
+                if (action == WindowAction.Maximize) { DesktopInputRouter.Instance?.CancelFor(w); w.ToggleMaximize(); }
+                w.gameObject.SetActive(true);
+                p.State = w.IsMaximized ? WindowState.Maximized : WindowState.Normal;
+                Focus(p);
             }
-
-            OnProcessClosed?.Invoke(id);
+            if (IsCurrent(w)) OnProcessStateChanged?.Invoke(p);
+            if (IsCurrent(w) && ActiveWindowId == p.InstanceId) OnProcessFocused?.Invoke(p);
+            Notify();
+            return true;
         }
-
-        /// <summary>
-        /// 창 최대화 / 복원 토글
-        /// </summary>
-        public void ToggleMaximize(string id)
+        public void SetLocked(bool value)
         {
-            if (!_activeProcesses.TryGetValue(id, out var process)) return;
-            if (process.Instance == null) return;
-
-            process.Instance.ToggleMaximize();
-            process.State = process.Instance.IsMaximized ? WindowState.Maximized : WindowState.Normal;
-
-            FocusWindow(id);
-            OnProcessStateChanged?.Invoke(process);
+            if (value == IsLocked) return;
+            if (value) DesktopInputRouter.Instance?.Cancel();
+            IsLocked = value;
+            Notify();
         }
-
-        /// <summary>
-        /// 창을 맨 앞으로 가져오기 (Sibling Index 최상단 배치 및 포커스)
-        /// </summary>
-        public void FocusWindow(string id)
+        public void SetPolicy(Window w, bool show, bool minimize, bool modal = false, string owner = null)
         {
-            if (!_activeProcesses.TryGetValue(id, out var process)) return;
-            if (process.Instance == null) return;
-
-            process.Instance.transform.SetAsLastSibling();
-            OnProcessFocused?.Invoke(process);
+            if (w == null) return;
+            w.SetPolicyFields(show, minimize, modal, owner);
+            if (IsCurrent(w)) { if (modal && w.gameObject.activeSelf) Focus(GetProcess(w.WindowId)); Notify(); }
         }
-
-        /// <summary>
-        /// 특정 ID의 창 프로세스 조회
-        /// </summary>
-        public WindowProcess GetProcess(string id)
+        public void AppearanceChanged(Window w) { if (IsCurrent(w)) Notify(); }
+        private WindowProcess Modal()
+        { for (var i = stack.Count - 1; i >= 0; i--) if (Visible(stack[i]) && stack[i].Instance.IsModal) return stack[i]; return null; }
+        private bool IsOwner(WindowProcess owner, WindowProcess child)
         {
-            _activeProcesses.TryGetValue(id, out var process);
-            return process;
-        }
-
-        /// <summary>
-        /// 특정 ID의 창이 열려 있는지 여부
-        /// </summary>
-        public bool IsWindowOpen(string id)
-        {
-            return _activeProcesses.ContainsKey(id);
-        }
-
-        private Window FindPrefab(string id)
-        {
-            for (int i = 0; i < registeredPrefabs.Count; i++)
+            var visited = new HashSet<string>();
+            while (child != null && visited.Add(child.InstanceId))
             {
-                if (registeredPrefabs[i].id == id)
-                {
-                    return registeredPrefabs[i].prefab;
-                }
+                if (child.Instance.OwnerWindowId == owner.InstanceId) return true;
+                child = FindInstance(child.Instance.OwnerWindowId);
             }
-            return null;
+            return false;
+        }
+        private static bool Visible(WindowProcess p) => p.Instance != null && p.State != WindowState.Minimized && p.Instance.gameObject.activeSelf;
+        private void Focus(WindowProcess p)
+        { stack.Remove(p); stack.Add(p); ActiveWindowId = p.InstanceId; ApplySorting(); }
+        private void ChooseActive()
+        {
+            ActiveWindowId = null;
+            for (var i = stack.Count - 1; i >= 0; i--) if (Visible(stack[i])) { ActiveWindowId = stack[i].InstanceId; break; }
+            ApplySorting();
+        }
+        public void ApplySorting()
+        { for (var i = 0; i < stack.Count; i++) if (stack[i].Instance != null) stack[i].Instance.ApplySorting(i * 32); }
+        private void Remove(WindowProcess p)
+        {
+            var children = new List<WindowProcess>();
+            foreach (var candidate in processes.Values) if (IsOwner(p, candidate)) children.Add(candidate);
+            foreach (var child in children) if (GetProcess(child.Id) == child) Remove(child);
+            DesktopInputRouter.Instance?.CancelFor(p.Instance);
+            processes.Remove(p.Id); stack.Remove(p);
+            if (p.Instance != null) { p.Instance.gameObject.SetActive(false); if (Application.isPlaying) Destroy(p.Instance.gameObject); else DestroyImmediate(p.Instance.gameObject); }
+            ChooseActive();
+        }
+        public void RemovedExternally(Window w)
+        {
+            // Reference identity is essential when old OnDestroy follows a same-frame reopen.
+            var p = GetProcess(w.WindowId);
+            if (p == null || !ReferenceEquals(p.Instance, w)) return;
+            Remove(p); OnProcessClosed?.Invoke(p.Id); Notify();
+        }
+        public void ResetWindows()
+        {
+            DesktopInputRouter.Instance?.Cancel();
+            foreach (var p in new List<WindowProcess>(processes.Values)) if (GetProcess(p.Id) == p) Remove(p);
+            ActiveWindowId = null; IsLocked = false; Notify();
+        }
+        public void ConstrainAll(Rect bounds)
+        { foreach (var p in processes.Values) if (p.Instance != null) p.Instance.ConstrainTo(bounds); }
+        private void Notify()
+        {
+            pending = true;
+            if (publishing) return;
+            publishing = true;
+            try { while (pending) { pending = false; Changed?.Invoke(); } }
+            finally { publishing = false; }
         }
     }
 }
-

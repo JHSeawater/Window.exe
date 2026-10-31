@@ -100,6 +100,7 @@ namespace WindowExe.Desktop
 
         public void PressIcon(DesktopIconView icon)
         {
+            if (!DesktopInputRouter.DesktopAllowed()) return;
             if (!isActiveAndEnabled || selecting || dragging != null || !IsAvailable(icon)) return;
             // Keep the group until release decides between a click and a drag.
             if (!selectedIcons.Contains(icon)) Select(icon);
@@ -108,6 +109,7 @@ namespace WindowExe.Desktop
 
         public void ClearSelection()
         {
+            if (!DesktopInputRouter.DesktopAllowed()) return;
             if (!isActiveAndEnabled || selecting || dragging != null) return;
             Select(null);
             ResetClicks();
@@ -115,6 +117,7 @@ namespace WindowExe.Desktop
 
         public void Click(DesktopIconView icon, Vector2 screenPosition, float time)
         {
+            if (!DesktopInputRouter.DesktopAllowed()) return;
             if (!isActiveAndEnabled || !IsAvailable(icon) || dragging != null || selecting) return;
             Select(icon);
             if (lastClicked == icon && time >= lastClickTime && time - lastClickTime <= doubleClickSeconds
@@ -134,6 +137,7 @@ namespace WindowExe.Desktop
 
         public void BeginSelection(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed()) return;
             if (!isActiveAndEnabled || selecting || dragging != null || iconArea == null) return;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(iconArea,
                     data.pressPosition, data.pressEventCamera, out var start)) return;
@@ -185,6 +189,7 @@ namespace WindowExe.Desktop
 
         public void BeginDrag(DesktopIconView icon, PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed()) return;
             if (!isActiveAndEnabled || selecting || dragging != null || iconArea == null || !IsAvailable(icon)) return;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(iconArea,
                     data.pressPosition, data.pressEventCamera, out dragPress)) return;

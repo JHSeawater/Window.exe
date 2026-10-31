@@ -45,7 +45,7 @@ namespace WindowExe.Desktop
             content.anchorMax = new Vector2(0, 1);
             content.pivot = new Vector2(0, 0.5f);
             content.sizeDelta = Vector2.zero;
-            var scroll = bar.gameObject.AddComponent<ScrollRect>();
+            var scroll = bar.gameObject.AddComponent<TaskbarScrollRect>();
             scroll.viewport = viewport;
             scroll.content = content;
             scroll.horizontal = true;
@@ -92,7 +92,7 @@ namespace WindowExe.Desktop
             image.color = new Color(0.14f, 0.18f, 0.25f);
             var label = Label("Label", rect, text, 24);
             Stretch(label.rectTransform, Vector2.zero, Vector2.zero);
-            var button = rect.gameObject.AddComponent<Button>();
+            var button = rect.gameObject.AddComponent<TaskbarInputButton>();
             button.targetGraphic = image;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
             return button;
@@ -100,7 +100,7 @@ namespace WindowExe.Desktop
         private static Text Label(string name, Transform parent, string text, int fontSize)
         {
             var label = Rect(name, parent).gameObject.AddComponent<Text>();
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            GameTypography.Apply(label);
             label.fontSize = fontSize;
             label.color = Color.white;
             label.alignment = TextAnchor.MiddleCenter;
@@ -109,8 +109,6 @@ namespace WindowExe.Desktop
             label.supportRichText = false;
             label.raycastTarget = false;
             label.text = text;
-            var font = parent.GetComponentInParent<DesktopFont>();
-            if (font != null) font.Apply(label);
             return label;
         }
         private static RectTransform Rect(string name, Transform parent)

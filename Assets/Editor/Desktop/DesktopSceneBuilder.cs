@@ -32,7 +32,7 @@ namespace WindowExe.Desktop.Editor
 
         private static void InstallTaskbar(DesktopController desktop)
         {
-            var existing = desktop.GetComponentInChildren<TaskbarController>(true);
+            var existing = UnityEngine.Object.FindObjectsByType<TaskbarController>(FindObjectsInactive.Include, FindObjectsSortMode.None).FirstOrDefault(x => x.gameObject.scene == desktop.gameObject.scene);
             if (existing != null)
             {
                 TaskbarUiFactory.ApplyAppearance(existing);
@@ -143,6 +143,7 @@ namespace WindowExe.Desktop.Editor
             events.GetComponent<EventSystem>().pixelDragThreshold = 8;
             Canvas.ForceUpdateCanvases();
             InstallTaskbar(desktop);
+            DesktopIntegrationBuilder.Install(desktop);
             desktop.EnsureValidLayout();
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -182,7 +183,7 @@ namespace WindowExe.Desktop.Editor
             picture.preserveAspect = true;
             picture.raycastTarget = false;
             var label = Rect("Name", root, new Vector2(2, -122), new Vector2(140, 28)).gameObject.AddComponent<Text>();
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            GameTypography.Apply(label);
             label.fontSize = 22;
             label.color = Color.white;
             label.alignment = TextAnchor.MiddleCenter;

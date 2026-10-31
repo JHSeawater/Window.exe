@@ -24,12 +24,18 @@ namespace WindowExe.Desktop.Tests
         private readonly List<DesktopItemDefinition> extraDefinitions = new List<DesktopItemDefinition>();
         private EventSystem[] previousEventSystems;
         private DesktopInputTestScope inputScope;
+        private Canvas[] previousCanvases;
+        private DesktopInputRouter previousRouter;
 
         [UnitySetUp]
         public IEnumerator SetUp()
         {
             yield return new EnterPlayMode();
             inputScope = new DesktopInputTestScope();
+            previousCanvases = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            foreach(var c in previousCanvases) c.enabled=false;
+            previousRouter=Object.FindAnyObjectByType<DesktopInputRouter>();
+            if(previousRouter!=null) previousRouter.enabled=false;
             previousEventSystems = Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
             foreach (var previous in previousEventSystems) previous.enabled = false;
             root = new GameObject("RaycastTestCanvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
@@ -70,6 +76,8 @@ namespace WindowExe.Desktop.Tests
             if (events != null && events.name == "Events") Object.DestroyImmediate(events.gameObject);
             foreach (var previous in previousEventSystems)
                 if (previous != null) previous.enabled = true;
+            foreach(var c in previousCanvases) if(c!=null) c.enabled=true;
+            if(previousRouter!=null) previousRouter.enabled=true;
             inputScope?.Dispose();
             inputScope = null;
             yield return new ExitPlayMode();
@@ -92,6 +100,7 @@ namespace WindowExe.Desktop.Tests
 
         private GameObject Hit(Vector2 screenPosition)
         {
+            Canvas.ForceUpdateCanvases();
             var data = new PointerEventData(events) { position = screenPosition };
             var hits = new List<RaycastResult>();
             events.RaycastAll(data, hits);

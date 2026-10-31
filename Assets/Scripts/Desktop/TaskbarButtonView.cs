@@ -53,8 +53,7 @@ namespace WindowExe.Desktop
                 glyph.sprite = info.Icon;
                 glyph.color = info.Icon != null ? Color.white : new Color(0.55f, 0.75f, 0.95f);
             }
-            var font = GetComponentInParent<DesktopFont>();
-            if (font != null && titleLabel != null) font.Apply(titleLabel);
+            GameTypography.Apply(titleLabel);
             FitTitle();
         }
 
@@ -105,11 +104,13 @@ namespace WindowExe.Desktop
 
         public override void OnPointerDown(PointerEventData data)
         {
+            if (!DesktopInputRouter.TaskbarAllowed(data)) return;
             if (data.button == PointerEventData.InputButton.Left) suppressClick = false;
             base.OnPointerDown(data);
         }
         public override void OnPointerClick(PointerEventData data)
         {
+            if (!DesktopInputRouter.TaskbarAllowed(data)) return;
             if (!suppressClick) base.OnPointerClick(data);
         }
         public void OnInitializePotentialDrag(PointerEventData data)
@@ -119,6 +120,7 @@ namespace WindowExe.Desktop
         }
         public void OnBeginDrag(PointerEventData data)
         {
+            if (!DesktopInputRouter.TaskbarAllowed(data)) return;
             suppressClick = true;
             data.eligibleForClick = false;
             GetComponentInParent<ScrollRect>()?.OnBeginDrag(data);

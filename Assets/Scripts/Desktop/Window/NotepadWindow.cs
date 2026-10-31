@@ -178,6 +178,7 @@ namespace WindowExe.Desktop.Desktop.Window
                     }
                 }
 
+                GameTypography.Apply(_tmpText);
                 _tmpText.sortingLayerID = SortingLayer.NameToID(PrimarySortingLayerName);
                 _tmpText.sortingOrder = 1; // 텍스트는 배경보다 위인 1
 
@@ -194,35 +195,6 @@ namespace WindowExe.Desktop.Desktop.Window
             }
         }
 
-#if UNITY_EDITOR
-        protected override void OnValidate()
-        {
-            base.OnValidate();
-            SetupPrimaryComponents();
-            ApplySize(size);
 
-            if (_backgroundRenderer != null)
-            {
-                _backgroundRenderer.color = backgroundColor;
-                _backgroundRenderer.sprite = backgroundSprite;
-                _backgroundRenderer.enabled = (backgroundSprite != null);
-            }
-
-            if (_tmpText != null)
-            {
-                _tmpText.fontSize = fontSize;
-                _tmpText.color = textColor;
-                _tmpText.alignment = alignment;
-                _tmpText.text = text;
-            }
-        }
-
-        protected override void Reset()
-        {
-            base.Reset();
-            SetupPrimaryComponents();
-            ApplySize(size);
-        }
-#endif
     }
 }

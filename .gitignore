@@ -30,6 +30,11 @@
 !/Assets/Settings.meta
 !/Assets/Welcome/
 !/Assets/Welcome.meta
+!/Assets/Shaders/
+!/Assets/Shaders.meta
+/Assets/Shaders/*
+!/Assets/Shaders/Desktop/
+!/Assets/Shaders/Desktop.meta
 
 # Share the desktop feature in each role; keep unrelated local files excluded
 /Assets/Scripts/*

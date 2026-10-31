@@ -11,17 +11,20 @@ namespace WindowExe.Desktop
         public void Configure(DesktopController owner) => desktop = owner;
         public void OnPointerDown(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button == PointerEventData.InputButton.Left) suppressClick = false;
         }
 
         public void OnPointerClick(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button == PointerEventData.InputButton.Left && !suppressClick && desktop != null)
                 desktop.ClearSelection();
         }
 
         public void OnBeginDrag(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button != PointerEventData.InputButton.Left || desktop == null) return;
             suppressClick = true;
             data.eligibleForClick = false;
@@ -30,6 +33,7 @@ namespace WindowExe.Desktop
 
         public void OnDrag(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button == PointerEventData.InputButton.Left && desktop != null) desktop.UpdateSelection(data);
         }
 

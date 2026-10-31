@@ -1,5 +1,5 @@
 {
   "name": "WindowExe.Desktop.Editor",
-  "references": ["WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem"],
+  "references": ["WindowExe.Desktop", "Unity.ugui", "Unity.InputSystem", "Unity.TextMeshPro"],
   "includePlatforms": ["Editor"]
 }

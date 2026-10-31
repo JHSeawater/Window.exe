@@ -27,6 +27,7 @@ namespace WindowExe.Desktop
             selection = highlight;
             iconImage = image;
             nameLabel = label;
+            GameTypography.Apply(nameLabel);
             if (iconImage != null && item != null) iconImage.sprite = item.Icon;
             SetDisplayName(item != null ? item.DisplayName : "");
             SetSelected(false);
@@ -46,6 +47,7 @@ namespace WindowExe.Desktop
 
         public void OnPointerDown(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button != PointerEventData.InputButton.Left || desktop == null) return;
             suppressClick = false;
             desktop.PressIcon(this);
@@ -53,12 +55,14 @@ namespace WindowExe.Desktop
 
         public void OnPointerClick(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button != PointerEventData.InputButton.Left || suppressClick || desktop == null) return;
             desktop.Click(this, data.position, Time.unscaledTime);
         }
 
         public void OnBeginDrag(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button != PointerEventData.InputButton.Left || desktop == null) return;
             suppressClick = true;
             data.eligibleForClick = false;
@@ -67,6 +71,7 @@ namespace WindowExe.Desktop
 
         public void OnDrag(PointerEventData data)
         {
+            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button == PointerEventData.InputButton.Left && desktop != null)
                 desktop.Drag(this, data);
         }
