@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: c41373fce6c9f724d8aaa4b2f3772428
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - secondarySprite: {instanceID: 0}
+  - taskbarIcon: {instanceID: 0}
+  - textFont: {instanceID: 0}
+  - wifi: {instanceID: 0}
+  - browserBackgroundSprite: {fileID: 21300000, guid: 2ac17c9889333124f889019bf2242885, type: 3}
+  - koreanFont: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

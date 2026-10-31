@@ -18,6 +18,12 @@ namespace WindowExe.Desktop
         public DesktopItemDefinition Item => item;
         public RectTransform Rect => (RectTransform)transform;
         public DesktopController Desktop => desktop;
+        public Text NameLabel => nameLabel;
+
+        public void SetIconSprite(Sprite sprite)
+        {
+            if (iconImage != null) iconImage.sprite = sprite;
+        }
 
         public void Configure(DesktopController owner, DesktopItemDefinition definition,
             Image highlight, Image image, Text label)
@@ -27,7 +33,6 @@ namespace WindowExe.Desktop
             selection = highlight;
             iconImage = image;
             nameLabel = label;
-            GameTypography.Apply(nameLabel);
             if (iconImage != null && item != null) iconImage.sprite = item.Icon;
             SetDisplayName(item != null ? item.DisplayName : "");
             SetSelected(false);
@@ -47,7 +52,6 @@ namespace WindowExe.Desktop
 
         public void OnPointerDown(PointerEventData data)
         {
-            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button != PointerEventData.InputButton.Left || desktop == null) return;
             suppressClick = false;
             desktop.PressIcon(this);
@@ -55,14 +59,31 @@ namespace WindowExe.Desktop
 
         public void OnPointerClick(PointerEventData data)
         {
-            if (!DesktopInputRouter.DesktopAllowed(data)) return;
-            if (data.button != PointerEventData.InputButton.Left || suppressClick || desktop == null) return;
+            if (suppressClick || desktop == null) return;
+
+            KeyFileMechanic keyFile = GetComponent<KeyFileMechanic>();
+
+            if (data.button == PointerEventData.InputButton.Right)
+            {
+                if (keyFile != null && keyFile.isActiveAndEnabled)
+                    keyFile.ShowContextMenu(data.position);
+                return;
+            }
+
+            if (data.button != PointerEventData.InputButton.Left) return;
+
+            // key.txt는 일반 WindowManager 열기 요청 대신 전용 기믹으로 처리.
+            if (keyFile != null && keyFile.isActiveAndEnabled)
+            {
+                keyFile.HandleLeftClick(data.position, Time.unscaledTime);
+                return;
+            }
+
             desktop.Click(this, data.position, Time.unscaledTime);
         }
 
         public void OnBeginDrag(PointerEventData data)
         {
-            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button != PointerEventData.InputButton.Left || desktop == null) return;
             suppressClick = true;
             data.eligibleForClick = false;
@@ -71,7 +92,6 @@ namespace WindowExe.Desktop
 
         public void OnDrag(PointerEventData data)
         {
-            if (!DesktopInputRouter.DesktopAllowed(data)) return;
             if (data.button == PointerEventData.InputButton.Left && desktop != null)
                 desktop.Drag(this, data);
         }
