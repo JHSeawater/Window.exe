@@ -173,6 +173,12 @@
   - 메뉴 바 드래그: 마우스로 상단 메뉴 바를 잡고 끌어 창 전체를 부드럽게 이동.
   - 8방향 테두리/모서리 드래그: 상/하/좌/우 4개 변 및 4개 꼭짓점을 마우스로 잡고 끌어 실제 OS 창처럼 반대편이 고정된 채 자연스러운 리사이즈 지원 (최소/최대 크기 클램핑 포함).
   - 조작 상호 배제 및 모서리 우선권: 모서리/변 판정이 메뉴 바 판정보다 우선순위를 가지며, 겹치는 경계 클릭 시 이동과 크기 조절이 동시 발생하는 현상을 차단한다.
+- 창 테두리(`Border`) [확정 — 사용자 지정]:
+  - `Window` 기본 클래스에서 자식 `Border`(`SpriteRenderer`, `drawMode = SpriteDrawMode.Sliced`)를 생성·관리한다.
+  - Sorting Layer는 `WindowFront`(`PrimarySortingLayerName`), Sorting Order는 해당 창의 베이스 Order 기준 `-1`(`order - 1`)로 배치한다. 창 본체 배경(0) 및 타이틀바(10)보다 바로 뒤에 위치하여 외곽으로 튀어나온 부분이 시각적 테두리를 형성한다.
+  - 크기 및 위치: 타이틀바를 포함한 창 전체 외곽(`size.x + borderThickness * 2`, `size.y + BarHeight + borderThickness * 2`), 중심 Y는 `BarHeight / 2`에 위치한다.
+  - 기본값은 두께 `0.12f`, 색상 차콜 블랙(`new Color(0.12f, 0.12f, 0.12f, 1f)`), 기본 스프라이트는 `WhiteSprite`이며 Inspector 및 `SetBorder()`를 통해 런타임에 동적으로 변경 가능하다.
+  - 논리적 창 크기 판정(`OuterBounds`) 및 화면 경계 제약은 테두리 두께를 제외한 기존 본체+타이틀바 크기를 유지하여 시각적 요소로만 동작한다.
 - 창 내부는 `Primary`와 `Secondary`가 1:1 동일 위치·크기로 겹쳐지는 오버레이 구조를 갖는다:
   - `Primary`: 자식 클래스에서 내용 자유 구현. Sorting Layer `WindowFront`, Order 0으로 렌더링.
   - `Secondary`: 스프라이트(`SpriteRenderer`) 전용 영역. Sorting Layer `WindowBack`에 그리며 인스턴스 순서는 관리자가 지정한다. 현재 일반 검증 창에서 의도적으로 미지정한 경우 해당 렌더러를 끄고 오류를 출력하지 않는다. 캡처 소비 시험과 게임용 특수 셰이더는 구분한다.
@@ -1014,3 +1020,32 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 - 첫 플레이·시연: 유언만 보고 전진/창 모양/Space를 알아내는지, 플레이 길이·재시도·예고 반응·다운로드 여유를 확인하고 제안 수치/문구를 조정. 무적은 눈 위협, 다운로드 멈춤은 시간 제한을 별도로 제어하며 Space를 디버그에 재사용하지 않음.
 
 직전 연출·성공 엔딩·다운로드 완료 배드 엔딩의 신호 시험과 다른 담당의 실제 장면 통합 시험은 따로 기록한다. 배드 엔딩의 장면·이후 새 게임 UI가 미정이어도 리스폰 없는 종료 계약을 먼저 계획하고 검증한다. 과거 105개 통과 기록이나 기존 빌드 결과를 새 보스전 검증으로 보고하지 않는다.
+
+## 18. 인터넷 창 3페이즈(하노이 탑 네트워크 퍼즐, 검색 기록, 검색 결과 화면)와 리소스 지원
+
+`InternetWindow`를 **Phase 1(네트워크 연결 하노이 탑 퍼즐)**, **Phase 2(검색 기록 화면)**, **Phase 3(검색 결과 화면 - 404 및 총 이미지 덧씌움)**의 3단계 구조로 구현했다.
+
+- **상태 전환 (`WifiConnection` 연동):**
+  - `WifiConnection`의 기본 연결 상태를 `false`(오프라인)로 시작한다.
+  - 오프라인 상태(`IsOnline == false`)에서는 Phase 1 하노이 탑 퍼즐이 표시되며, 세 번째 막대에 모든 원반을 옮겨 퍼즐을 해결하면 `WifiConnection.SetConnected(true)`를 호출해 Phase 2 검색 기록 화면으로 전환한다.
+- **오프라인 네트워크 스프라이트 (수동 할당 지원):**
+  - '네트워크 연결이 끊어졌습니다' 안내 텍스트 위쪽에 인스펙터에서 수동 할당할 수 있는 `offlineIconSprite` 필드를 제공한다.
+  - `offlineIconSize`(기본 0.85×0.85)와 `offlineIconOffset`으로 크기 및 위치 미세 조정을 지원하며, 스프라이트가 미할당(null)인 경우 렌더러가 비활성화되어 화면에 나타나지 않는다.
+  - `WindowFront`와 `WindowBack` 양쪽 렌더러에 동시 적용되어 평상시 및 `WINDOW.exe` 겹침 투시 상황에서도 자연스럽게 표시된다.
+- **`WindowFront` / `WindowBack` 동시 렌더링을 통한 원반 투시:**
+  - `WindowFront`에는 세 원반 모두 동일한 크기와 동일한 회색(블라인드 외형)으로 렌더링하여 평상시에는 순서를 알 수 없게 하고, `WINDOW.exe`가 겹치면 가려지게 한다.
+  - `WindowBack`에는 세 원반을 서로 다른 실제 크기(너비 대/중/소)와 고유 색상(빨강/노랑/파랑)으로 렌더링하여 `WINDOW.exe`의 뷰포트 셰이더(`TPMaterial`)를 통해서만 순서가 드러나게 한다.
+- **조작 규칙 및 피드백:**
+  - 원반은 숫자 `1, 2, 3`을 가지며, 자신의 아래에는 자신보다 작은 숫자의 원반만 올 수 있다(`CanMoveDisk`).
+  - 막대를 클릭하면 맨 위 원반이 위로 살짝 뜨고(`SelectedPeg`), 다른 막대를 클릭하면 대상 막대의 맨 위로 즉시 순간이동하며 짧은 떨림(Shake) 이펙트와 사운드를 재생한다.
+  - `WINDOW.exe` 창이 인터넷 창과 겹쳐진 상태(`IsHanoiBlockedByWindowExe()`)에서는 하노이 탑 조작을 차단한다.
+- **Phase 2 검색 기록의 `WindowBack` / `WindowFront` 분리 렌더링 및 완전 가림 해독:**
+  - Phase 2에서 텍스트를 제외한 비-텍스트 요소(브라우저 배경 `backArtwork`, 검색창 틀/배경/화살표 배경, 드롭다운 목록 틀/배경/행 배경)는 `WindowBack`(`SecondarySortingLayerName`)에서 렌더링하여 `WINDOW.exe`로 겹쳐 보았을 때 창이 뚫려 보이지 않게 한다.
+  - 텍스트 요소(제목, 검색창 라벨, 화살표, 드롭다운 3개 행 텍스트)는 `WindowFront`와 `WindowBack` 양쪽에서 모두 렌더링한다.
+  - 해독 전(`IsDecoded == false`)에는 `WindowBack`의 3번째 행에 `"◷  총"`을 렌더링하고, `WindowFront`에는 불투명 가림막(`frontThirdRowMask`)과 깨진 글리치 텍스트(`"◷  " + scrambledHistory`)를 렌더링하여 평상시에는 깨진 텍스트만 보이게 한다.
+  - `WINDOW.exe` 뷰포트가 3번째 검색 결과를 완전히 가려 온전한 `WindowBack` 렌더로 바뀌면(`TryRevealThirdHistory()`), `decoded = true`로 전환되어 `WindowFront`의 3번째 행 내용도 `WindowBack`과 동일하게 `"◷  총"`으로 영구 동기화된다.
+- **Phase 3 검색 결과 화면 (404 / 총 이미지 덧씌움):**
+  - 검색 기록 클릭 시 별도 팝업 창을 열지 않고, 인터넷 창 내부에서 검색 UI를 숨기고 해당 결과 화면으로 직접 전환한다. 뒤로가기는 지원하지 않는다.
+  - **404 결과 (`Result404`):** 총을 제외한 검색 기록(1·2번째) 클릭 시 전환되며, 인터넷 창 위에 `notFound404Sprite`를 덧씌운다. 인스펙터에서 `notFound404Size` 및 `notFound404Offset`으로 크기와 위치를 수동 조절할 수 있다.
+  - **총 결과 (`ResultGun`):** 해독된 3번째 검색 기록("총") 클릭 시 전환되며, 인터넷 창 위에 `gunResultSprite`를 덧씌운다. 인스펙터에서 `gunResultSize` 및 `gunResultOffset`으로 크기와 위치를 수동 조절할 수 있다.
+  - 두 결과 이미지 모두 `WindowFront`와 `WindowBack` 양쪽 렌더러에 배치되어, `WINDOW.exe` 창을 위에 올려놓아도 창이 뚫리지 않고 이미지가 정상적으로 투시된다. 미할당 시에는 렌더러가 비활성화된다.

@@ -363,6 +363,7 @@ MonoBehaviour:
   returnSpeed: 5
   centerLocalPosition: {x: 0, y: 0}
   addMicroJitter: 1
+  jitterType: 0
   jitterOnlyWhenTarget: 0
   jitterAmount: 0.035
   jitterSpeed: 25
@@ -1306,6 +1307,10 @@ MonoBehaviour:
   size: {x: 16, y: 9}
   minSize: {x: 16, y: 9}
   maxSize: {x: 16, y: 9}
+  showBorder: 1
+  borderThickness: 0.06
+  borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
+  borderSprite: {fileID: 0}
   primarySprite: {fileID: -1028853848481646593, guid: ebc969cbb2d714eb3897d5988e810897, type: 3}
   targetWindowId: window
   dangerMaxTime: 3
@@ -1512,6 +1517,7 @@ MonoBehaviour:
   returnSpeed: 5
   centerLocalPosition: {x: 0, y: 0}
   addMicroJitter: 1
+  jitterType: 0
   jitterOnlyWhenTarget: 0
   jitterAmount: 0.035
   jitterSpeed: 25

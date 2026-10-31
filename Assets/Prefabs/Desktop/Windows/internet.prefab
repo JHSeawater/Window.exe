@@ -822,6 +822,10 @@ MonoBehaviour:
   size: {x: 5.2, y: 3.4}
   minSize: {x: 2.4, y: 1.2}
   maxSize: {x: 20, y: 20}
+  showBorder: 1
+  borderThickness: 0.06
+  borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
+  borderSprite: {fileID: 0}
   backgroundSprite: {fileID: 6001568132130595043, guid: 2c759fdd88d0ecb4cb37427abf73f3ca, type: 3}
   backgroundColor: {r: 1, g: 1, b: 1, a: 1}
   text: "\uC778\uD130\uB137\n\uAC80\uC99D\uC6A9 \uC548\uB0B4 \uCC3D\uC785\uB2C8\uB2E4. \uC2E4\uC81C \uC6F9 \uD0D0\uC0C9 \uAE30\uB2A5\uC740 \uC81C\uACF5\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."

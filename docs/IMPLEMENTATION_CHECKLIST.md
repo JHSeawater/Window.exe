@@ -581,3 +581,29 @@ Ryzen 7 7735HS·Radeon 680M·Direct3D12에서 동일한 Development/Instrumented
 - [ ] 실행 씬을 명시한 Windows 빌드와 직접 조작을 확인한다. 기동·자동 입력·수동 조작·앞뒤 연출 통합의 확인 범위를 나눠 기록하고 BOSS_FIGHT 11장과 대조한다.
 
 계획 단계에서 제안한 최소 면적 21,600 기준 px²와 통로 연결 보정은 아직 플레이 검증하지 않았다. 기존 105개 시험 결과는 보스전이 없던 기준선이며 보스전 완료의 근거가 아니다.
+
+## 19. 인터넷 창 3페이즈(하노이 탑 퍼즐, 검색 기록, 결과 404/총 이미지)와 리소스 지원 — 2026-10-31
+
+- [x] `WifiConnection.cs` 및 `Desktop.unity`의 초기 연결 상태를 오프라인(`isConnected = false`)으로 설정하여 인터넷 창 진입 시 Phase 1(네트워크 연결 퍼즐)부터 시작하도록 구성.
+- [x] `InternetWindow.cs`에 3개 막대와 3개 원반 기반의 하노이 탑 퍼즐(Phase 1) 및 완료 시 기존 검색 기록(Phase 2) 전환 구현.
+- [x] '네트워크 연결이 끊어졌습니다' 안내 텍스트 위쪽에 인스펙터 수동 할당용 `offlineIconSprite` 필드 추가 및 `offlineIconSize`·`offlineIconOffset` 지원. 미할당 시 자동 비활성화.
+- [x] `WindowFront`(동일 크기·동일 색상 블라인드 원반)와 `WindowBack`(`WINDOW.exe` 투시용 서로 다른 크기·색상 원반) 동시 렌더링 및 정렬(`ApplySorting`) 연동.
+- [x] 막대 클릭 시 맨 위 원반 떠오름, 다른 막대 클릭 시 순간이동·떨림(Shake) 이펙트·사운드 재생, `WINDOW.exe` 겹침 시 조작 차단(`IsHanoiBlockedByWindowExe`) 구현.
+- [x] Phase 2(검색 기록)에서 비-텍스트 요소(브라우저 배경, 검색창, 드롭다운 목록 배경)를 `WindowBack`에서 렌더링하고, 텍스트만 `WindowFront`와 `WindowBack` 양쪽에서 렌더링하도록 구조 변경(창 뚫림 현상 해결).
+- [x] `WindowFront`의 3번째 검색 결과를 `WINDOW.exe`로 완전히 가려 온전한 `WindowBack` 렌더(`"◷  총"`)로 바뀌면 해독(`decoded = true`)되어 `WindowFront`의 내용도 `WindowBack`과 동일하게 전환되도록 구현.
+- [x] Phase 3(검색 결과) 구현: 외부 팝업 창 호출을 무시하고 인터넷 창 내부에서 검색 UI를 숨긴 뒤 1·2번째 기록 클릭 시 404 이미지(`Result404`), 해독된 3번째 기록 클릭 시 총 이미지(`ResultGun`)를 덧씌움.
+- [x] 인스펙터 수동 할당용 필드(`notFound404Sprite`, `notFound404Size`, `notFound404Offset`, `gunResultSprite`, `gunResultSize`, `gunResultOffset`) 및 `WindowFront`·`WindowBack` 동시 렌더링(창 뚫림 방지) 지원.
+- [x] `InternetWindowTests.cs` 단위 테스트 8건 작성 및 컴파일 확인.
+- [ ] 열린 Unity 에디터 인스펙터에서 `offlineIconSprite`, `notFound404Sprite`, `gunResultSprite`에 실제 이미지 수동 할당 및 Test Runner / Play Mode 직접 조작 확인.
+
+## 20. 창 외곽 테두리(Window Border) 구현과 정렬 연동 — 2026-10-31
+
+사용자 요청에 따라 모든 창에 공통으로 시각적 외곽 테두리를 추가하고, `WindowFront` 레이어의 `order - 1`에 배치하여 창 본체 및 타이틀바 바로 뒤에 깔리도록 구현했다.
+
+- [x] 공통 부모 클래스 `Window.cs`에 자식 `Border`(`SpriteRenderer`, `drawMode = SpriteDrawMode.Sliced`) 생성 및 초기화 로직(`InitializeBorder`, `UpdateBorderAppearance`) 구현.
+- [x] Sorting Layer는 `PrimarySortingLayerName`(`WindowFront`), Sorting Order는 해당 창의 베이스 Order 기준 `order - 1`로 배치하도록 `ApplySorting(order)` 로직 확장.
+- [x] 크기 및 위치 레이아웃: 타이틀바를 포함한 창 전체 외곽(`size.x + borderThickness * 2`, `size.y + BarHeight + borderThickness * 2`, 중심 Y = `BarHeight / 2`)을 감싸도록 `ApplySize(Vector2)` 시 자동 동기화.
+- [x] 기본 수치 및 커스터마이징: 기본 두께 `0.12f`, 색상 차콜 블랙(`new Color(0.12f, 0.12f, 0.12f, 1f)`), 기본 스프라이트 `WhiteSprite` 적용. Inspector 및 `SetBorder(bool, float, Color, Sprite)`를 통해 동적 변경 가능.
+- [x] 시각적 요소 분리: 창 논리 바운드(`OuterBounds`) 및 화면 경계 제약(`DesktopWindowSpace`)은 기존 크기를 유지하여 기존 입력/리사이즈/이동 로직 및 테스트와 100% 호환 보장.
+- [x] `WindowBorderTests.cs` 단위 테스트 5건 작성 및 Unity CLI EditMode 실행으로 전원 통과 확인 (`BorderDoesNotAffectOuterBounds`, `BorderRendererIsInitializedOnPrimaryLayerWithCorrectDefaults`, `BorderSizeEncompassesWindowAndTitleBarWithThickness`, `BorderSortingOrderIsWindowOrderMinusOne`, `SetBorderUpdatesAppearanceAndLayout`).
+- [x] 기존 창 관련 회귀 테스트(`WindowGeometryTests`, `WindowExeWindowTests` 등) 통과 확인.

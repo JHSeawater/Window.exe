@@ -1093,7 +1093,7 @@ MonoBehaviour:
     prefab: {fileID: 872445645725028065, guid: 38ec8f29280064ef59449cf2bacc2536, type: 3}
   - id: peepWindow
     prefab: {fileID: 1747678266989169681, guid: 270fea833f570492b9885326a6620c1d, type: 3}
-  - id: key-file
+  - id: key-image
     prefab: {fileID: 807555320379949309, guid: 019e84947dcf8c740abe844161eaa139, type: 3}
   windowRoot: {fileID: 808775645}
 --- !u!4 &808775645
@@ -1464,7 +1464,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79d7dbbff55cd4d44ba47918eadb6658, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.WifiConnection
-  isConnected: 0
+  isConnected: 1
 --- !u!4 &1158675612
 Transform:
   m_ObjectHideFlags: 0
@@ -1738,7 +1738,7 @@ MonoBehaviour:
   correctFileName: key.png
   textFileIcon: {fileID: 21300000, guid: 5620ed1f33b3eb448836055570f3be8a, type: 3}
   imageFileIcon: {fileID: 21300000, guid: 4fbbae5c8ced8af469323ab582a6032b, type: 3}
-  keyImage: {fileID: 21300000, guid: 6376478312c4c85468bb76d9e9182309, type: 3}
+  keyImage: {fileID: 21300000, guid: 4800854836f34eb46848beee02b4135e, type: 3}
   imageWindowId: key-image
   uiFont: {fileID: 0}
   doubleClickSeconds: 0.3

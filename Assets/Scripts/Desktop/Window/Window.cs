@@ -18,6 +18,12 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] protected Vector2 size = new Vector2(4, 3);
         [SerializeField] protected Vector2 minSize = new Vector2(2.4f, 1.2f);
         [SerializeField] protected Vector2 maxSize = new Vector2(20, 20);
+        [Header("Window Border")]
+        [SerializeField] private bool showBorder = true;
+        [SerializeField] private float borderThickness = 0.06f;
+        [SerializeField] private Color borderColor = new Color(0.12f, 0.12f, 0.12f, 1f);
+        [SerializeField] private Sprite borderSprite;
+        private SpriteRenderer borderRenderer;
         private SpriteRenderer secondary;
         private WindowTitleBar titleBar;
         private WindowResizeHandle resizeHandle;
@@ -38,6 +44,10 @@ namespace WindowExe.Desktop.Desktop.Window
         public string OwnerWindowId => ownerWindowId;
         public Sprite TaskbarIcon => taskbarIcon;
         public float BarHeight => titleBar != null ? titleBar.BarHeight : 0.5f;
+        public bool ShowBorder => showBorder;
+        public float BorderThickness => borderThickness;
+        public Color BorderColor => borderColor;
+        public SpriteRenderer BorderRenderer => borderRenderer;
         public WindowInteraction CurrentInteraction { get; internal set; }
         public event System.Action<Window> OnCloseRequested;
         public Rect OuterBounds => Rect.MinMaxRect(transform.localPosition.x - size.x / 2, transform.localPosition.y - size.y / 2,
@@ -47,6 +57,7 @@ namespace WindowExe.Desktop.Desktop.Window
         public void Attach(WindowManager owner, string id) { manager = owner; WindowId = id; }
         public void InitializeVisuals()
         {
+            InitializeBorder();
             secondary = Child("Secondary").GetComponent<SpriteRenderer>();
             if (secondary == null) secondary = Child("Secondary").gameObject.AddComponent<SpriteRenderer>();
             secondary.sortingLayerName = SecondarySortingLayerName;
@@ -72,6 +83,38 @@ namespace WindowExe.Desktop.Desktop.Window
             }
             if (manager != null && manager.IsCurrent(this)) manager.ApplySorting();
             else ApplySorting(DefaultSortingOrder);
+        }
+        private void InitializeBorder()
+        {
+            var borderTransform = Child("Border");
+            borderRenderer = borderTransform.GetComponent<SpriteRenderer>();
+            if (borderRenderer == null) borderRenderer = borderTransform.gameObject.AddComponent<SpriteRenderer>();
+            borderRenderer.sortingLayerName = PrimarySortingLayerName;
+            borderRenderer.drawMode = SpriteDrawMode.Sliced;
+            UpdateBorderAppearance();
+        }
+        private void UpdateBorderAppearance()
+        {
+            if (borderRenderer == null) return;
+            borderRenderer.sprite = borderSprite != null ? borderSprite : WindowTitleBar.WhiteSprite;
+            borderRenderer.color = borderColor;
+            borderRenderer.enabled = showBorder;
+        }
+        private void UpdateBorderLayout(Vector2 value)
+        {
+            if (borderRenderer == null) return;
+            borderRenderer.transform.localPosition = new Vector3(0, BarHeight / 2f, 0);
+            borderRenderer.size = new Vector2(value.x + borderThickness * 2f, value.y + BarHeight + borderThickness * 2f);
+            borderRenderer.enabled = showBorder;
+        }
+        public void SetBorder(bool show, float thickness, Color color, Sprite sprite = null)
+        {
+            showBorder = show;
+            borderThickness = thickness;
+            borderColor = color;
+            if (sprite != null) borderSprite = sprite;
+            UpdateBorderAppearance();
+            ApplySize(size);
         }
         private Transform Child(string name)
         {
@@ -222,14 +265,21 @@ namespace WindowExe.Desktop.Desktop.Window
                 renderer.sortingLayerName = isSecondary ? SecondarySortingLayerName : PrimarySortingLayerName;
                 var offset = isSecondary
                     ? (renderer.transform == secondary.transform ? 0 : 1)
-                    : (renderer.GetComponentInParent<WindowTitleBar>() != null
-                        ? (renderer is SpriteRenderer ? 10 : 11)
-                        : (renderer is SpriteRenderer && renderer.name != "Image" ? 0 : 1));
+                    : (renderer == borderRenderer
+                        ? -1
+                        : (renderer.GetComponentInParent<WindowTitleBar>() != null
+                            ? (renderer is SpriteRenderer ? 10 : 11)
+                            : (renderer is SpriteRenderer && renderer.name != "Image" ? 0 : 1)));
                 renderer.sortingOrder = order + offset;
             }
         }
         protected virtual void ApplySize(Vector2 value)
-        { if (secondary != null) secondary.size = value; titleBar?.UpdateLayout(value); resizeHandle?.UpdateLayout(value); }
+        {
+            if (secondary != null) secondary.size = value;
+            titleBar?.UpdateLayout(value);
+            resizeHandle?.UpdateLayout(value);
+            UpdateBorderLayout(value);
+        }
         protected abstract void InitializePrimary();
         protected static Sprite GetFallbackTransparentSprite() => WindowTitleBar.WhiteSprite;
 #if UNITY_EDITOR

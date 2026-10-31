@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.ImageWindow
   windowTitle: "\uC5F4\uC1E0.png"
-  secondarySprite: {fileID: 6001568132130595043, guid: 2c759fdd88d0ecb4cb37427abf73f3ca, type: 3}
+  secondarySprite: {fileID: 21300000, guid: 4800854836f34eb46848beee02b4135e, type: 3}
   taskbarIcon: {fileID: 0}
   textFont: {fileID: 11400000, guid: 175ebe806d595564f84dc956fb376780, type: 2}
   showInTaskbar: 0
@@ -55,4 +55,8 @@ MonoBehaviour:
   size: {x: 4, y: 3}
   minSize: {x: 2.4, y: 1.2}
   maxSize: {x: 20, y: 20}
+  showBorder: 1
+  borderThickness: 0.06
+  borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
+  borderSprite: {fileID: 0}
   primarySprite: {fileID: 21300000, guid: 4800854836f34eb46848beee02b4135e, type: 3}

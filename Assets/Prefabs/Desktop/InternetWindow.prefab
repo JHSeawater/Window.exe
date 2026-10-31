@@ -69,6 +69,30 @@ MonoBehaviour:
   requiredRevealWindowId: WINDOW.exe
   requiredOverlapWidth: 0.3
   requiredOverlapHeight: 0.15
+  notFound404Sprite: {fileID: -2759278307782537378, guid: 239c60e44cc1a438c947556f3e88a201, type: 3}
+  notFound404Tint: {r: 1, g: 1, b: 1, a: 1}
+  notFound404Size: {x: 8, y: 4}
+  notFound404Offset: {x: 0, y: -0.97}
+  gunResultSprite: {fileID: 2550910329441555423, guid: 1216fb0cc84434595a6cce72948b7eff, type: 3}
+  gunResultTint: {r: 1, g: 1, b: 1, a: 1}
+  gunResultSize: {x: 7, y: 4.2}
+  gunResultOffset: {x: 0, y: 0}
+  offlineIconSprite: {fileID: 21300000, guid: 6910e53dc6bda4f5cacfd3518ac0d982, type: 3}
+  offlineIconTint: {r: 1, g: 1, b: 1, a: 1}
+  offlineIconSize: {x: 0.75, y: 0.5}
+  offlineIconOffset: {x: -3, y: 0}
+  blindDiskColor: {r: 0.5, g: 0.53, b: 0.58, a: 1}
+  revealedDiskColors:
+  - {r: 0.9, g: 0.26, b: 0.26, a: 1}
+  - {r: 0.95, g: 0.72, b: 0.18, a: 1}
+  - {r: 0.24, g: 0.62, b: 0.96, a: 1}
+  shakeDuration: 0.12
+  shakeMagnitude: 0.06
+  audioSource: {fileID: 0}
+  diskSelectClip: {fileID: 0}
+  diskMoveClip: {fileID: 0}
+  diskErrorClip: {fileID: 0}
+  networkConnectedClip: {fileID: 0}
   koreanFont: {fileID: 0}
 --- !u!114 &6409535793845256470
 MonoBehaviour:

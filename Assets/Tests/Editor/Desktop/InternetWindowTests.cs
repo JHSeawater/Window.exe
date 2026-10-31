@@ -187,6 +187,165 @@ namespace WindowExe.Desktop.Tests
             Assert.IsTrue(internet.IsOnline);
             Assert.AreEqual(InternetWindow.InternetPhase.SearchHistory, internet.CurrentPhase);
         }
+
+        [Test]
+        public void SettingOfflineIconSpriteUpdatesRenderers()
+        {
+            var tex = new Texture2D(2, 2);
+            var testSprite = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                internet.SetOfflineIconSprite(testSprite);
+                Assert.AreEqual(testSprite, internet.OfflineIconSprite);
+
+                var frontRenderer = internet.transform.Find("Primary/IE_OfflineIconFront")?.GetComponent<SpriteRenderer>();
+                var backRenderer = internet.transform.Find("Secondary/IE_BackContent/IE_OfflineIconBack")?.GetComponent<SpriteRenderer>();
+
+                Assert.IsNotNull(frontRenderer);
+                Assert.IsNotNull(backRenderer);
+                Assert.AreEqual(testSprite, frontRenderer.sprite);
+                Assert.AreEqual(testSprite, backRenderer.sprite);
+                Assert.IsTrue(frontRenderer.enabled);
+                Assert.IsTrue(backRenderer.enabled);
+            }
+            finally
+            {
+                Object.DestroyImmediate(testSprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void Phase2RendersNonTextOnWindowBackAndDecodesWhenCoveredByWindowExe()
+        {
+            wifi.SetConnected(true);
+            internet.MoveTo(Vector2.zero);
+            internet.SetDropdownOpen(true);
+
+            Assert.IsTrue(internet.IsOnline);
+            Assert.IsTrue(internet.DropdownOpen);
+            Assert.IsFalse(internet.IsDecoded);
+
+            // 비-텍스트 요소(브라우저 배경, 검색창, 목록 배경)는 WindowBack에서 렌더링
+            var backArtwork = internet.transform.Find("Secondary/IE_BackContent/IE_BackBrowserArtwork")?.GetComponent<SpriteRenderer>();
+            var listBorder = internet.transform.Find("Secondary/IE_BackContent/IE_ListBorder")?.GetComponent<SpriteRenderer>();
+            var frontMask = internet.transform.Find("Primary/IE_FrontThirdRowMask")?.GetComponent<SpriteRenderer>();
+
+            Assert.IsNotNull(backArtwork);
+            Assert.IsNotNull(listBorder);
+            Assert.IsNotNull(frontMask);
+            Assert.IsTrue(backArtwork.gameObject.activeInHierarchy);
+            Assert.AreEqual(Window.SecondarySortingLayerName, backArtwork.sortingLayerName);
+            Assert.AreEqual(Window.SecondarySortingLayerName, listBorder.sortingLayerName);
+            Assert.IsTrue(frontMask.gameObject.activeInHierarchy);
+            Assert.AreEqual(Window.PrimarySortingLayerName, frontMask.sortingLayerName);
+
+            // 텍스트는 WindowFront와 WindowBack 모두에서 렌더링되며, 해독 전 3번째 행은 Front(글리치)와 Back("◷  총")이 다름
+            Assert.AreEqual(Window.PrimarySortingLayerName, internet.GetFrontRowSortingLayer(2));
+            Assert.AreEqual(Window.SecondarySortingLayerName, internet.GetBackRowSortingLayer(2));
+            Assert.AreEqual("◷  총", internet.GetBackRowText(2));
+            Assert.AreNotEqual("◷  총", internet.GetFrontRowText(2));
+
+            var windowExe = manager.Open("window");
+            Assert.IsNotNull(windowExe);
+
+            // 부분 겹침만으로는 해독되지 않음
+            Rect row2Rect = internet.GetSearchRowWorldRect(2);
+            windowExe.MoveTo(new Vector2(row2Rect.xMax + windowExe.Size.x * 0.4f, row2Rect.center.y));
+            Assert.IsFalse(internet.TryRevealThirdHistory());
+            Assert.IsFalse(internet.IsDecoded);
+            Assert.AreNotEqual("◷  총", internet.GetFrontRowText(2));
+
+            // WINDOW.exe로 3번째 검색 결과를 완전히 가리면 해독되어 WindowFront 내용도 WindowBack과 동일하게 바뀜
+            windowExe.MoveTo(row2Rect.center);
+            Assert.IsTrue(internet.TryRevealThirdHistory());
+            Assert.IsTrue(internet.IsDecoded);
+            Assert.AreEqual(internet.GetBackRowText(2), internet.GetFrontRowText(2));
+            Assert.AreEqual("◷  총", internet.GetFrontRowText(2));
+            Assert.IsFalse(frontMask.gameObject.activeSelf);
+        }
+
+        [Test]
+        public void Phase3TransitionsTo404AndGunResultsWithoutOpeningPopups()
+        {
+            var tex404 = new Texture2D(2, 2);
+            var sprite404 = Sprite.Create(tex404, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            var texGun = new Texture2D(2, 2);
+            var spriteGun = Sprite.Create(texGun, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                wifi.SetConnected(true);
+                internet.SetDropdownOpen(true);
+                internet.SetNotFound404Sprite(sprite404);
+                internet.SetGunResultSprite(spriteGun);
+
+                var front404 = internet.transform.Find("Primary/IE_NotFound404Front")?.GetComponent<SpriteRenderer>();
+                var back404 = internet.transform.Find("Secondary/IE_BackContent/IE_NotFound404Back")?.GetComponent<SpriteRenderer>();
+                var frontGun = internet.transform.Find("Primary/IE_GunResultFront")?.GetComponent<SpriteRenderer>();
+                var backGun = internet.transform.Find("Secondary/IE_BackContent/IE_GunResultBack")?.GetComponent<SpriteRenderer>();
+                var searchBorder = internet.transform.Find("Secondary/IE_BackContent/IE_SearchBorder")?.GetComponent<SpriteRenderer>();
+
+                Assert.IsNotNull(front404);
+                Assert.IsNotNull(back404);
+                Assert.IsNotNull(frontGun);
+                Assert.IsNotNull(backGun);
+                Assert.IsNotNull(searchBorder);
+
+                int processCountBefore = manager.ActiveProcesses.Count;
+
+                // 1. 총을 제외한 검색 기록(index 0) 클릭 -> Phase 3 404 결과로 전환
+                internet.ChooseHistory(0);
+                Assert.AreEqual(InternetWindow.InternetPhase.Result404, internet.CurrentPhase);
+                Assert.AreEqual(processCountBefore, manager.ActiveProcesses.Count, "팝업 창을 열지 않고 내부에서만 띄워야 함");
+
+                // 검색창 숨김, 404 이미지가 WindowFront & WindowBack 양쪽에 활성화
+                Assert.IsFalse(searchBorder.gameObject.activeSelf);
+                Assert.IsTrue(front404.gameObject.activeSelf);
+                Assert.IsTrue(back404.gameObject.activeSelf);
+                Assert.IsTrue(front404.enabled);
+                Assert.IsTrue(back404.enabled);
+                Assert.IsFalse(frontGun.gameObject.activeSelf);
+                Assert.IsFalse(backGun.gameObject.activeSelf);
+
+                // 2. 총 검색 기록은 해독 전에는 클릭해도 반응 없음
+                Assert.IsFalse(internet.IsDecoded);
+                internet.ChooseHistory(2);
+                Assert.AreEqual(InternetWindow.InternetPhase.Result404, internet.CurrentPhase);
+
+                // WINDOW.exe로 해독 완료
+                var windowExe = manager.Open("window");
+                Rect row2Rect = internet.GetSearchRowWorldRect(2);
+                windowExe.MoveTo(row2Rect.center);
+                internet.SetDropdownOpen(true);
+                Assert.IsTrue(internet.TryRevealThirdHistory());
+                Assert.IsTrue(internet.IsDecoded);
+
+                // 3. 해독 후 총 검색 기록(index 2) 클릭 -> Phase 3 총 결과로 전환
+                int processCountBeforeGun = manager.ActiveProcesses.Count;
+                internet.ChooseHistory(2);
+                Assert.AreEqual(InternetWindow.InternetPhase.ResultGun, internet.CurrentPhase);
+                Assert.AreEqual(processCountBeforeGun, manager.ActiveProcesses.Count, "gun-file 팝업 창을 열지 않고 내부에서만 띄워야 함");
+
+                // 404 이미지 숨김, 총 이미지가 WindowFront & WindowBack 양쪽에 활성화
+                Assert.IsFalse(searchBorder.gameObject.activeSelf);
+                Assert.IsFalse(front404.gameObject.activeSelf);
+                Assert.IsFalse(back404.gameObject.activeSelf);
+                Assert.IsTrue(frontGun.gameObject.activeSelf);
+                Assert.IsTrue(backGun.gameObject.activeSelf);
+                Assert.IsTrue(frontGun.enabled);
+                Assert.IsTrue(backGun.enabled);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite404);
+                Object.DestroyImmediate(tex404);
+                Object.DestroyImmediate(spriteGun);
+                Object.DestroyImmediate(texGun);
+            }
+        }
     }
 }
 

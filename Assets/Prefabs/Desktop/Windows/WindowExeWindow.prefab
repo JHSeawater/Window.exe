@@ -55,6 +55,10 @@ MonoBehaviour:
   size: {x: 5.2, y: 3.4}
   minSize: {x: 2.4, y: 1.2}
   maxSize: {x: 20, y: 20}
+  showBorder: 1
+  borderThickness: 0.06
+  borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
+  borderSprite: {fileID: 0}
   viewportMaterial: {fileID: 2100000, guid: c31661001e00e7a49a9c845582788d0c, type: 2}
   fillSprite: {fileID: 0}
   viewportColor: {r: 1, g: 1, b: 1, a: 1}
