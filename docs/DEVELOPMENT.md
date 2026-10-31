@@ -34,6 +34,7 @@
 
 - 사용자 폴더 정리 요청에 따라 `Assets/Scripts/Desktop`, `Editor/Desktop`, `Tests/Editor/Desktop`, `Prefabs/Desktop`, `Data/Desktop`과 `Assets/Scenes/Desktop.unity`, 관련 `.meta`를 Git 공유 대상으로 관리한다. 기존 `Settings`, `Welcome`, 씬도 유지한다.
 - 데스크톱의 코드·에디터 도구·테스트·프리팹·데이터·씬과 참조 아트를 함께 공유한다. `Assets/Art/Icon`, `Screen`, `Fonts`를 아트의 공유 범위로 관리한다.
+- 게임 효과음(총기 발사음, 도탄음, 부팅음, 시스템 사운드 등) 공유를 위해 `Assets/Sounds`와 해당 `.meta`를 Git 공유 대상으로 관리한다.
 - 사용자 지정 보스전 오류 이미지 `Assets/Art/Warning/Cannot_Move.png`와 해당 `.meta`·부모 `Warning.meta`만 추가 공유 경로로 허용한다. 다른 Warning 아트는 기존 제외 범위를 유지한다.
 - 2페이즈 눈은 `Assets/Art/creature/Iris.png`·`Red_Pupil_2.png`와 해당 `.meta`·부모 `creature.meta`만 추가 허용한다. 다른 creature 아트는 기존 제외 범위를 유지한다.
 - 나머지 에셋 폴더와 `.meta`는 로컬에 보존하되 `.gitignore`로 제외한다. 새 범위의 파일을 공유할 때에도 필요한 의존성과 `.meta`를 함께 확인한다.
@@ -60,6 +61,7 @@
 | `Assets/Data/Desktop` | 고정 ID·이름·아이콘을 지정한 ScriptableObject `.asset` 인스턴스 |
 | `Assets/Scenes` | 실행·검증 씬 |
 | `Assets/Art/Icon`, `Screen`, `Fonts` | 아이콘·화면 배경·폰트 파일 |
+| `Assets/Sounds` | 게임 효과음 및 오디오 클립 (`.mp3` 등) |
 | `Assets/Settings` | 기존 렌더링·프로젝트용 설정 에셋 |
 | `Assets/Shaders/Desktop` | 한글 TMP 렌더링에 필요한 SDF 셰이더·include·라이선스 |
 
