@@ -308,6 +308,48 @@ Test Runner에서 EditMode의 `WindowExe.Desktop.Tests`를 선택한다. 테스�
 
 `Builds/Desktop/Desktop.exe`, `Builds/DesktopValidation/player-*-final.log`, 검증 JSON은 작업 환경의 로컬 결과물이다. 새로 클론한 저장소에는 들어 있지 않다. 기존 테스트·빌드의 확인 결과는 체크리스트 8장에서 관리하고, 새 환경에서 확인한 결과는 실제 검증 후 갱신한다.
 
+### 8-1. 새 아이콘과 창 추가 가이드 (How-To)
+
+팀원 커밋 `4f337a0`의 추가 안내를 현재 공유 구조에 맞춰 보존했다. 현재 사용할 수 있는 일반 창은 `NotepadWindow`·`ImageWindow`다. 아래 `WindowExeWindow`·`PeepPuzzleWindow`는 16장의 팀원 보고에 등장하지만 공유 소스가 없어 아직 선택·검증할 수 없다. 기존 아이콘 프리팹의 Selection·Icon Image·Name Label 연결을 유지하고, 생성 코드에서는 `DesktopIconView.Configure`를 사용해 등록·글꼴을 함께 적용한다.
+
+새로운 콘텐츠(아이콘 및 창)를 데스크톱에 추가하고 더블클릭으로 연결하는 전체 절차는 다음과 같다:
+
+1. **아이콘 데이터 에셋 생성 (`DesktopItemDefinition`)**
+   - Project 창에서 `Assets/Data/Desktop/` 폴더 우클릭 → **Create → WINDOW.exe → Desktop Item** 실행.
+   - 인스펙터 설정:
+     - `Item Id`: 고유 식별자 문자열 (예: `window`, `peep-puzzle` 등, 소문자 권장).
+     - `Display Name`: 아이콘 밑에 표시될 이름 (예: `WINDOW.exe`).
+     - `Icon`: 바탕화면에 보일 스프라이트 (Texture의 Sprite Import Mode: `Single` 권장).
+
+2. **바탕화면 아이콘 씬 배치 및 등록**
+   - `Assets/Scenes/Desktop.unity` 씬을 열고 계층 구조에서 `DesktopCanvas/IconArea`를 확인한다.
+   - `Assets/Prefabs/Desktop/DesktopIcon.prefab`을 `IconArea` 하위로 드래그하여 배치한다 (또는 기존 아이콘 복제).
+   - 생성된 오브젝트의 `DesktopIconView` 컴포넌트:
+     - `Item` 필드에 1단계에서 만든 `DesktopItemDefinition` 에셋을 드래그 할당.
+     - `Desktop` 필드에 상위 `DesktopCanvas` 오브젝트 할당.
+     - 자식 `Image`와 `Name` 오브젝트를 각각 `Icon Image`와 `Name Label`에 연결.
+     - `Image`의 `Sprite`를 데이터의 아이콘으로 교체하고, `Name` 텍스트를 지정.
+   - `DesktopCanvas` 오브젝트의 `DesktopController` 컴포넌트:
+     - `Icons` 리스트의 `Size`를 1 늘리고, 새로 추가한 `DesktopIconView`를 리스트에 등록.
+     - 아이콘 RectTransform 위치(`Anchored Position`)를 겹치지 않게 조절.
+
+3. **새 창 프리팹 준비 (`Window`)**
+   - 창 루트 오브젝트를 생성하고 용도에 맞는 스크립트 부착:
+     - 엿보기 셰이더 창: `WindowExeWindow` (소스 공유 후 사용)
+     - 엿보기 퍼즐 창: `PeepPuzzleWindow` (소스 공유 후 사용)
+     - 텍스트 창: `NotepadWindow`, 이미지 창: `ImageWindow`
+   - 외형, 폰트, 머티리얼 또는 퍼즐 오브젝트를 설정한 뒤 `Assets/Prefabs/Desktop/Windows/` 폴더에 프리팹(`Prefab`)으로 저장.
+
+4. **WindowManager에 식별자(`Id`)와 창 프리팹 매핑**
+   - 씬 계층 구조에서 `WindowWorldRoot` 오브젝트의 `WindowManager` 컴포넌트를 선택.
+   - `Registered Prefabs` 리스트에 `+` 버튼으로 새 항목 추가:
+     - `Id`: **1단계의 `Item Id`와 완벽히 일치**하게 입력 (예: `window`).
+     - `Prefab`: 3단계에서 만든 Window 프리팹을 드래그 할당.
+
+5. **실행 및 검증**
+   - Play Mode를 실행하고 추가된 아이콘을 더블클릭하면 `DesktopController` → `DesktopWindowLauncher` → `WindowManager.Open(itemId)` 흐름을 통해 해당 창이 열린다.
+   - 작업 표시줄에 버튼이 등록되고 활성화·최소화·복원·닫기가 정상 동작하는지 확인한다.
+
 ## 9. 드래그 영역 선택 구현
 
 사용자의 계획대로 구현하라는 요청에 따라 단일 선택 코드를 확장했다. 아래 동작은 `fab196a` 이후 구현·검증해 이번 공유 변경에 포함한다. 단일 선택 API와 열기 이벤트 형식은 유지한다. 완료 확인 결과는 체크리스트 2-1장과 9장에서 관리한다.
@@ -732,3 +774,56 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 숨김 창에서는 렌더링이 생략될 수 있어 성능 통과 근거로 사용하지 않는다. 표시된 창에서 타이밍을 수집하고 GPU 결과 지연을 고려해 이전 프레임 기록을 읽는다. 원시 CSV의 GPU 0·비정상 타이밍과 수집 누락은 별도 확인하며, CPU/FPS나 0으로 대체해 GPU 예산을 통과시키지 않는다. 측정용 빌드가 변경한 Variant·Frame Timing Stats 등 설정은 최종 게임 빌드 전에 원래 값으로 복원한다.
 
 `--crt-capture <출력 폴더>`는 별도의 Instrumented Development 실행에서 상태별 화면을 Unity ScreenCapture API로 저장한다. 계측과 동시에 실행하지 않으며 결과는 직접 입력 검증과 구분한다. 현재 장치의 측정·빌드·남은 GPU/직접 조작 확인은 체크리스트 16-1장을 따른다.
+
+## 15. 시작 화면과 CRT 모니터 셰이더 보고
+
+팀원 커밋 `4f337a0`의 기존 14장을 보존한 기록이다. 원문은 `[확정 — 사용자 지정]`으로 표시되어 있었으나, 아래 두 C# 파일과 셰이더는 현재 원격과 공유 작업 트리에 없다. 구현 내용은 팀원 보고이며 공유 프로젝트의 완료 확인과 구분한다. 이 장의 국소 모니터 효과는 14장의 실제 전체 화면 `CRTOverlay`와 별개다. 소스·씬·메타 공유와 실행 검증은 구현 체크리스트 17장에서 관리한다.
+
+### 15-1. 시작 화면 (Start Screen) 구현
+- `Assets/Scripts/Desktop/StartScreenController.cs`:
+  - New Input System(`Keyboard.current.anyKey`, `Mouse.current.leftButton`, 게임패드 등)과 Legacy Input을 동시에 지원하는 Any Key 감지.
+  - 시작 직후의 오입력을 방지하기 위한 `inputDelay`(기본 0.3초) 및 중복 씬 로딩 방지 플래그(`isTransitioning`).
+  - 텍스트 페이드: `CalculateBlinkT(time)`를 통해 부드러운 사인파 기반 Ping-Pong(0.0~1.0) 보간을 수행하며, 알파 페이드 및 밝은/어두운 색상 간 컬러 페이드 모드를 모두 지원.
+  - 공통 폰트 정책: `GameTypography.Apply(pressAnyKeyText)`를 통해 씬 로드 시 NeoDunggeunmo 폰트를 보장.
+- `Assets/Editor/Desktop/StartScreenBuilder.cs`:
+  - `WINDOW.exe/Start Screen/Setup Start Screen in Current Scene`: 현재 씬에 1920×1080 기준 캔버스, 배경, 모니터 글리치 영역, 타이틀, 깜빡이는 텍스트 계층 구조를 생성하고 컴포넌트를 자동 연결.
+  - `WINDOW.exe/Start Screen/Create New Start Screen Scene`: 신규 `StartScreen.unity` 씬을 생성하고 저장.
+
+### 15-2. 낡은 모니터 둥근 영역 노이즈 셰이더
+- `Assets/Shaders/Desktop/CRTMonitorNoise.shader`:
+  - 모니터 모양의 둥근 모서리 마스킹: SDF Rounded Box 거리 공식을 적용해 별도의 텍스처 마스크 없이도 모서리가 둥근 화면 형태로 자름 (`_CornerRadius`, `_EdgeSoftness`).
+  - CRT 화면 왜곡: 브라운관 특유의 볼록한 배럴 왜곡(Barrel Distortion) 공식 적용 (`_Curvature`).
+  - 노이즈 및 아티팩트: 시간 기반 화이트 노이즈(치지직 정전기 효과), 가로 주사선(Scanline), 간헐적 수평 글리치(Horizontal Jitter) 및 비네팅(Vignette)을 파라미터로 제어 가능.
+  - UI Mask / Stencil 지원: 유니티 기본 `Mask` 컴포넌트 자식으로 배치할 때에도 호환되도록 스텐실 프로퍼티를 내장.
+
+## 16. 엿보기 퍼즐 창 보고
+
+팀원 커밋 `4f337a0`의 기존 15장을 보존한 기록이다. 원문은 `[확정 — 사용자 지정]`으로 표시되어 있었으나, 아래 세 C# 파일은 현재 원격과 공유 작업 트리에 없다. 이 기록의 병합을 코드 공유·구현 완료나 GDD 규칙 확정으로 해석하지 않는다. 소스가 공유된 뒤 API·좌표·입력·렌더링을 검증한다.
+
+현재 GDD의 바탕화면 고정 엿보기 공간, 시선 위협의 1초 노출/오염 누적 제안과 아래 창 상대 좌표·3초 즉사/10초 부재 규칙은 다르다. 단서 4개 조건과 창 조작 제한도 팀원 보고 내용으로 보관하며 합의 전 GDD와 게임 동작을 변경하지 않는다. 후속 확인은 구현 체크리스트 17장을 따른다.
+
+### 16-1. 창(Window)과 윈도우(WINDOW.exe)의 관계
+- **창 (PeepPuzzleWindow):** 데스크톱 위에 띄우는 퍼즐 대상 창. 기본 구조는 `ImageWindow`를 따르며, 크기 조절이 불가능한 고정 크기 창이다.
+  - `Primary`: Sorting Layer `WindowFront`, Sorting Order `<= 10`. 평상시에 보이는 전면 이미지 렌더링.
+  - `Secondary`: Sorting Layer `WindowBack`, Sorting Order `0`. 창의 자식(상대 좌표)으로 고정되며, 윈도우(WINDOW.exe)를 겹쳤을 때만 투영되어 보이는 엿보기 공간.
+- **윈도우 (WINDOW.exe):** 플레이어가 데스크톱에서 조작해 이 창 위에 겹쳐 올리는 특수 윈도우. 윈도우가 가리키는 사각형 영역(`OuterBounds`)이 곧 Secondary를 들여다보는 '관측 뷰포트'가 된다.
+
+원문에서 제시한 Primary Order <= 10·Secondary Order 0은 아래 보고의 수치다. 실제 공유 관리자는 창 스택의 정렬 값을 동적으로 적용하므로 이 상수를 기존 창에 덮어쓰지 않는다. 공유 소스 통합 시 10장의 관리자 정렬·Secondary 캡처 계약과 대조한다.
+
+### 16-2. 엿보기 퍼즐 오브젝트 및 타이머 규칙
+- `Assets/Scripts/Desktop/Window/PeepPuzzleObject.cs`:
+  - `Clue`, `Danger`, `Watcher`, `Escape` 4가지 타입 지원.
+  - 월드 바운드 판정 및 윈도우 뷰포트 내 클릭 처리(`Click()`, `ContainsPoint()`).
+- `Assets/Scripts/Desktop/Window/PeepPuzzleWindow.cs`:
+  - **크기 조절 불능:** `ResizeAt` 항상 `null`, `IsPointerOverResizeHandle` `false`, `Maximize`·`ToggleMaximize` 무효화.
+  - **단서 오브젝트 (4개):** 윈도우 시야 내에서 클릭 시 수집 완료. 4개 모두 수집되어야 탈출 오브젝트가 잠금 해제됨.
+  - **봐선 안 되는 오브젝트 (1개):** 윈도우 시야 내에 들어오면 누적 타이머 작동. 3초 이상 노출 시 즉시 게임오버(`TriggerGameOver`). 시야에서 벗어나면 누적 타이머 즉시 0초로 리셋.
+  - **주기적으로 봐야 하는 오브젝트 (1개):** 윈도우 시야 내에 있으면 타이머 0초 유지. 윈도우 밖으로 벗어나 보지 못하는 시간이 10초 이상 지속되면 즉시 게임오버(`TriggerGameOver`). 시야에 다시 들어오면 0초로 리셋.
+  - **탈출 오브젝트 (1개):** 4개 단서 수집 완료 시 잠금 해제. 윈도우 시야 내에서 클릭 시 `OnPuzzleCleared()` 이벤트 호출 및 창 자동 닫기(`RequestClose()`).
+  - **리소스 및 오디오:** 인스펙터 수동 할당을 지원하며 오디오는 클립이 할당되어 있을 때만 `PlayOneShot`으로 안전하게 재생.
+
+### 16-3. 윈도우 (WINDOW.exe) 창 구현
+- `Assets/Scripts/Desktop/Window/WindowExeWindow.cs`:
+  - 기본적인 창 프레임(제목 표시줄 드래그 이동, 8방향 리사이즈, 최소화/최대화/닫기 버튼)을 온전히 갖춤.
+  - 창 본문(Primary)에는 사용자가 제작한 특수 셰이더 머티리얼(`viewportMaterial`) 하나만 `SpriteRenderer`(Sliced 모드)에 적용하여 창 크기 동기화 렌더링.
+  - `SetMaterial(Material)` 및 인스펙터 수동 할당을 통해 셰이더 머티리얼을 유연하게 연결 가능.

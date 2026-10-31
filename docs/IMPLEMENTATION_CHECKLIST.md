@@ -518,4 +518,16 @@ Ryzen 7 7735HS·Radeon 680M·Direct3D12에서 동일한 Development/Instrumented
 
 화면 검증용 Development Player에서도 두 해상도 각각 Off 전/후·단계 0~3·Spike·Simple의 8개 캡처를 만들었다. 셰이더 지원·오류색 없음·작업 표시줄 위 효과·Raycast 비활성, Off 복귀 시 기준 화면과 픽셀 일치를 확인했다. 근거는 `PlayerVisual1280x720`·`PlayerVisual1920x1080`과 `player-visual-summary.json`이다. 이는 상태를 API로 설정한 네이티브 출력 검증이며 실제 마우스 조작을 대신하지 않는다. Computer Use는 초기 연결·재시도·커널 재설정 후에도 native pipe 연결 실패로 사용할 수 없었다.
 
-최종 배포용은 `Builds/DesktopValidation/CRTOverlay/Release/Window.exe`이며 **경고 0·오류 0**으로 빌드됐다. Managed Code Variant Release·Frame Timing Stats 원복 상태로 만들었고 배포 DLL에 성능/화면 캡처 Probe와 GC 계측 코드가 없는 것을 확인했다. 두 해상도 인자별 기동·씬 로드·프로세스 유지·앱 예외 0을 확인하고 종료했다. 각 기동 로그의 URP 후처리 스트리핑 경고 22건과 Unity 서비스 연결 실패는 CRT 출력/앱 예외와 구분해 보관한다. `release-build.json`, `release-startup-*.json`, `release-player*.log`를 따른다. 커밋·푸시는 이번 작업에서 수행하지 않았다.
+최종 배포용은 `Builds/DesktopValidation/CRTOverlay/Release/Window.exe`이며 **경고 0·오류 0**으로 빌드됐다. Managed Code Variant Release·Frame Timing Stats 원복 상태로 만들었고 배포 DLL에 성능/화면 캡처 Probe와 GC 계측 코드가 없는 것을 확인했다. 두 해상도 인자별 기동·씬 로드·프로세스 유지·앱 예외 0을 확인하고 종료했다. 각 기동 로그의 URP 후처리 스트리핑 경고 22건과 Unity 서비스 연결 실패는 CRT 출력/앱 예외와 구분해 보관한다. `release-build.json`, `release-startup-*.json`, `release-player*.log`를 따른다. 검증 당시에는 커밋·푸시하지 않았으며 이후 공유 요청에 따른 보존·병합은 17장에서 관리한다.
+
+## 17. 팀원 문서 병합과 소스 공유 후속 — 2026-10-31
+
+사용자 커밋·푸시 요청 뒤 원격을 확인해 팀원 `4f337a0`을 발견했고, 후속 병합 지시에 따라 통합했다. CRT 구현·공유 아트는 `c649476`으로 먼저 보존했다. 원격 변경은 개발 가이드 한 파일이며 소스·씬 변경은 없었다. 개발 가이드 10~14장의 현재 구현/검증 기록을 유지하고, 새 안내를 8-1장에, 팀원 보고를 15·16장에 보존했다. 병합 과정에서 GDD나 런타임 코드를 변경하지 않았다.
+
+- [x] 양쪽 개발 문서 원본을 로컬 `Builds/MergeReview/4f337a0`에 보관하고 원격 변경과 공유 파일 존재 여부를 대조했다.
+- [x] 기존 창 통합·공통 글꼴·QA와 전체 화면 CRT 기록을 보존했다. 미공유 구현을 완료로 표시하지 않고 팀원 보고와 현재 공유 상태를 구분했다.
+- [ ] 시작 화면의 `StartScreenController.cs`·`StartScreenBuilder.cs`·`CRTMonitorNoise.shader`와 관련 씬/메타가 공유되면 Input System·공통 글꼴·씬 전환·모니터 효과를 검증한다. 전체 화면 CRT와 별개인 효과다.
+- [ ] `PeepPuzzleObject.cs`·`PeepPuzzleWindow.cs`·`WindowExeWindow.cs`가 공유되면 기존 창 API·관리자 정렬·Secondary 캡처·실제 가림/클릭 판정을 검증한다.
+- [ ] 팀원 보고의 창 상대 좌표·3초 즉사·10초 부재·단서 4개·창 조작 제한을 현재 GDD와 대조하고 합의한 규칙을 해당 원본 문서에 반영한다. 이번 문서 병합만으로 기획 확정이나 게임 구현 완료로 처리하지 않는다.
+
+병합의 추가 변경은 문서뿐이다. CRT 구현 커밋의 105개 시험·Release 빌드 결과를 유지하며, 문서 병합을 이유로 같은 실행 검증을 반복하지 않는다. 미공유 소스는 이번 작업에서 새로 구현하지 않았다. CRT의 GPU 예산·실행 파일 직접 마우스 조작 미확인도 16장에 그대로 남아 있다.
