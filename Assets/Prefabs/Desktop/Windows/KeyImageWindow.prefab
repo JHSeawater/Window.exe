@@ -60,3 +60,23 @@ MonoBehaviour:
   borderColor: {r: 0.12, g: 0.12, b: 0.12, a: 1}
   borderSprite: {fileID: 0}
   primarySprite: {fileID: 21300000, guid: 4800854836f34eb46848beee02b4135e, type: 3}
+  breakShakeDuration: 0.25
+  breakShakeMagnitude: 0.12
+  debrisFallDuration: 0.5
+  debrisPieceCount: 7
+  debrisInwardVelocityRange: {x: -4.6, y: -2.4}
+  debrisVerticalVelocityRange: {x: -2, y: 2.8}
+  debrisGravity: -22
+  debrisAngularVelocityRange: {x: -550, y: 550}
+  brokenOverlaySprite: {fileID: 0}
+  brokenOverlayColor: {r: 1, g: 1, b: 1, a: 0.88}
+  brokenOverlayScale: {x: 1, y: 1}
+  brokenOverlayOffset: {x: 0, y: 0}
+  breakSoundClip: {fileID: 8300000, guid: b1f2b6834a9b94b01b8e866a8f7f1ee0, type: 3}
+  breakSoundVolume: 0.85
+  onBorderBroken:
+    m_PersistentCalls:
+      m_Calls: []
+  onKeyDroppedToRecycleBin:
+    m_PersistentCalls:
+      m_Calls: []

@@ -24,6 +24,7 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private Color borderColor = new Color(0.12f, 0.12f, 0.12f, 1f);
         [SerializeField] private Sprite borderSprite;
         private SpriteRenderer borderRenderer;
+        private bool isRightBorderBroken;
         private SpriteRenderer secondary;
         private WindowTitleBar titleBar;
         private WindowResizeHandle resizeHandle;
@@ -48,6 +49,8 @@ namespace WindowExe.Desktop.Desktop.Window
         public float BorderThickness => borderThickness;
         public Color BorderColor => borderColor;
         public SpriteRenderer BorderRenderer => borderRenderer;
+        public bool IsRightBorderBroken => isRightBorderBroken;
+        public SpriteRenderer SecondaryRenderer => secondary;
         public WindowInteraction CurrentInteraction { get; internal set; }
         public event System.Action<Window> OnCloseRequested;
         public Rect OuterBounds => Rect.MinMaxRect(transform.localPosition.x - size.x / 2, transform.localPosition.y - size.y / 2,
@@ -100,12 +103,25 @@ namespace WindowExe.Desktop.Desktop.Window
             borderRenderer.color = borderColor;
             borderRenderer.enabled = showBorder;
         }
-        private void UpdateBorderLayout(Vector2 value)
+        protected virtual void UpdateBorderLayout(Vector2 value)
         {
             if (borderRenderer == null) return;
-            borderRenderer.transform.localPosition = new Vector3(0, BarHeight / 2f, 0);
-            borderRenderer.size = new Vector2(value.x + borderThickness * 2f, value.y + BarHeight + borderThickness * 2f);
+            if (isRightBorderBroken)
+            {
+                borderRenderer.transform.localPosition = new Vector3(-borderThickness / 2f, BarHeight / 2f, 0);
+                borderRenderer.size = new Vector2(value.x + borderThickness, value.y + BarHeight + borderThickness * 2f);
+            }
+            else
+            {
+                borderRenderer.transform.localPosition = new Vector3(0, BarHeight / 2f, 0);
+                borderRenderer.size = new Vector2(value.x + borderThickness * 2f, value.y + BarHeight + borderThickness * 2f);
+            }
             borderRenderer.enabled = showBorder;
+        }
+        public virtual void SetRightBorderBroken(bool broken)
+        {
+            isRightBorderBroken = broken;
+            UpdateBorderLayout(size);
         }
         public void SetBorder(bool show, float thickness, Color color, Sprite sprite = null)
         {
@@ -136,6 +152,7 @@ namespace WindowExe.Desktop.Desktop.Window
         public void SetTaskbarIcon(Sprite icon) { taskbarIcon = icon; manager?.AppearanceChanged(this); }
         public void SetSecondarySprite(Sprite sprite)
         { secondarySprite = sprite; if (secondary != null) { secondary.sprite = sprite; secondary.size=size; secondary.enabled = sprite != null; } }
+        public void SetSecondaryColor(Color color) { if (secondary != null) secondary.color = color; }
         public virtual void RequestClose()
         {
             if (manager != null && !manager.IsCurrent(this)) return;
@@ -148,7 +165,7 @@ namespace WindowExe.Desktop.Desktop.Window
         public virtual bool IsPointerOverResizeHandle(Vector2 point) => resizeHandle != null && resizeHandle.IsPointerOverAnyHandle(point);
         public int ButtonAt(Vector2 point) => titleBar != null ? titleBar.ButtonAt(point) : -1;
         public bool TitleContains(Vector2 point) => titleBar != null && titleBar.Contains(point);
-        public bool Hit(Vector2 point) => OuterBounds.Contains(point) || IsPointerOverResizeHandle(point);
+        public virtual bool Hit(Vector2 point) => OuterBounds.Contains(point) || IsPointerOverResizeHandle(point);
         public virtual ResizeDirection? ResizeAt(Vector2 point) => resizeHandle != null ? resizeHandle.DirectionAt(point) : null;
         public virtual void MoveTo(Vector2 position)
         {

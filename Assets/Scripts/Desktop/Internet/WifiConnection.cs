@@ -12,6 +12,11 @@ namespace WindowExe.Desktop
     {
         public static WifiConnection Instance { get; private set; }
 
+        public static void ResetInstance(WifiConnection connection = null)
+        {
+            Instance = connection;
+        }
+
         [SerializeField] private bool isConnected = false;
         public bool IsConnected => isConnected;
         public event Action<bool> ConnectionChanged;

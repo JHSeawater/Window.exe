@@ -607,3 +607,36 @@ Ryzen 7 7735HS·Radeon 680M·Direct3D12에서 동일한 Development/Instrumented
 - [x] 시각적 요소 분리: 창 논리 바운드(`OuterBounds`) 및 화면 경계 제약(`DesktopWindowSpace`)은 기존 크기를 유지하여 기존 입력/리사이즈/이동 로직 및 테스트와 100% 호환 보장.
 - [x] `WindowBorderTests.cs` 단위 테스트 5건 작성 및 Unity CLI EditMode 실행으로 전원 통과 확인 (`BorderDoesNotAffectOuterBounds`, `BorderRendererIsInitializedOnPrimaryLayerWithCorrectDefaults`, `BorderSizeEncompassesWindowAndTitleBarWithThickness`, `BorderSortingOrderIsWindowOrderMinusOne`, `SetBorderUpdatesAppearanceAndLayout`).
 - [x] 기존 창 관련 회귀 테스트(`WindowGeometryTests`, `WindowExeWindowTests` 등) 통과 확인.
+
+## 21. 인터넷 창 Dual-Layer (`WindowFront` & `WindowBack`) 화면 동기화 및 검은 창 결함 해결 — 2026-10-31
+
+`WINDOW.exe` 투시 시 인터넷 창 메인 화면이 `Secondary`(`WindowBack`)에서 검은 창으로 보이는 현상을 해결하고, `Primary`와 `Secondary` 양쪽에서 동일한 메인 화면이 렌더링되도록 수정했다.
+
+- [x] 브라우저 배경 Dual-Layer 유지: `SetSecondarySprite(null)` 호출을 제거하고 `SetSecondarySprite`/`SetSecondaryColor`로 `Window` 기본 `secondary` 스프라이트를 브라우저 배경으로 동기화. `artwork`(`WindowFront`)와 `backArtwork`(`WindowBack`)를 모든 페이즈에서 상시 활성화 유지.
+- [x] 검색/드롭다운 UI 패널 대칭 렌더링: 검색창 테두리·채우기, 화살표 채우기, 드롭다운 목록 테두리·채우기, 3개 행 배경을 `WindowFront`(`frontSearchBorder` 등)와 `WindowBack`(`searchBorder` 등) 양쪽에 동일 크기·위치로 배치하고 정렬 레이어 및 순서 동기화.
+- [x] 투시 비밀 분기 보존:
+  - Phase 1 하노이 퍼즐의 `WindowFront` 블라인드 원반 vs `WindowBack` 크기·색상 구별 원반 분기 유지.
+  - Phase 2 검색 기록의 `WindowFront` 3번째 행 가림막·글리치 텍스트 vs `WindowBack` `"◷  총"` 분기 및 `WINDOW.exe` 완전 가림 시 해독(`decoded = true`) 동기화 유지.
+  - Phase 3 404 및 총 결과 화면의 `WindowFront` & `WindowBack` 동시 렌더링 유지.
+- [x] `InternetWindowTests.cs` 단위 테스트 8건 전체 통과 확인 (`StartsInPhase1WithUniformFrontAndDistinctBackDisks`, `ClickingPegLiftsTopDiskAndTeleportsWithShakeAndSound`, `EnforcesHanoiRuleOnlySmallerNumberAllowedBelow`, `OverlappingWindowExeBlocksHanoiManipulation`, `SolvingHanoiConnectsNetworkAndTransitionsToPhase2`, `SettingOfflineIconSpriteUpdatesRenderers`, `Phase2RendersNonTextOnWindowBackAndDecodesWhenCoveredByWindowExe`, `Phase3TransitionsTo404AndGunResultsWithoutOpeningPopups`).
+- [ ] Unity 에디터 Play Mode에서 `WINDOW.exe`를 인터넷 창 위에 드래그하여 투시 시 메인 화면이 검은 창 없이 완벽히 투시되는지 시각적 최종 확인.
+
+## 22. 총 발사·열쇠 창 오른쪽 테두리 파괴 및 열쇠 드래그 앤 드롭 구현 — 2026-10-31
+
+사용자 요청에 따라 인터넷 창 Phase 3의 총 발사 조건, 열쇠 창 오른쪽 테두리 파괴(두께 축소·좌측 이동·다중 선분 안쪽 무너짐·흔들림), 깨진 유리 텍스처 오버레이, 발사음/깨지는 소리 분리, 열쇠 이미지 마우스 드래그 추출 및 쓰레기통 드롭 이벤트를 구현하고 Unity CLI EditMode 테스트로 검증했다.
+
+- [x] `InternetWindow.cs` Phase 3 총(`ResultGun`) 발사 조건 및 연출 구현:
+  - 총구 좌표(`GetGunMuzzleWorldPosition`)와 열쇠 창(`ImageWindow`, `"key-image"`)이 모두 `WINDOW.exe`(`"window"`)의 `OuterBounds`에 덮여 있고, 열쇠 창 바운드가 총구 좌표의 왼쪽(`keyBounds.xMin < muzzlePos.x && keyBounds.center.x < muzzlePos.x`)에 있을 때 총 클릭 시 발사(`TryShootGun`).
+  - 발사 시 총 반동 흔들림(`IsGunShaking`), 발사 사운드(`HanoiSoundType.Shot` / `gunShotClip`), `OnGunFired` 이벤트 및 대상 열쇠 창의 `BreakRightBorder()` 호출 연결.
+- [x] `Window.cs` 및 `ImageWindow.cs` 오른쪽 테두리 파괴 및 다중 선분 창 안쪽 무너짐 연출 구현:
+  - `Window.SetRightBorderBroken(true)` 시 별도 덮개 오브젝트 없이 `borderRenderer.size.x`를 `value.x + borderThickness`로 줄이고 `localPosition.x`를 `-borderThickness / 2f`로 이동시켜 오른쪽 테두리만 제거.
+  - **다중 선분 안쪽 무너짐 연출:** 테두리를 7개의 선분 조각(`DebrisPiece`)으로 나누어 창 안쪽(왼쪽, `-X`, `-4.6 ~ -2.4`)으로 속도감 있게 튀어 날아가며 회전(`±550°/s`)하고 강한 중력(`-22f`)을 받아 무너져 내리며 페이드아웃되는 물리 연출 적용.
+  - `ImageWindow`에 `Secondary`(`WindowBack`) 테두리·배경·열쇠 이미지·다중 선분 파편 미러링을 추가하여 `WINDOW.exe`로 덮었을 때 창이 뚫리지 않도록 처리.
+  - `BreakRightBorder()` 호출 시 창 본체 피격 흔들림(`IsShakeActive`) 및 파괴 상태 전환(`IsBorderBroken = true`) 동시 수행.
+- [x] `ImageWindow.cs` 깨진 텍스처 오버레이 및 효과음 분리 재생 구현:
+  - **깨진 텍스처 오버레이:** `brokenOverlaySprite` 및 `SetBrokenOverlaySprite` 지원. 미할당 시에도 절차적 크랙 스프라이트 기본 제공 및 `WindowFront`/`WindowBack` 양쪽 동시 오버레이(`order + 3`)로 `WINDOW.exe` 투시 시에도 크랙이 뚜렷하게 덧씌워짐.
+  - **효과음 분리:** 총 발사 시 발사음(`InternetWindow`의 `HanoiSoundType.Shot` / `gunShotClip`)이 재생되고, 열쇠 창 피격 시 깨지는 소리(`ImageWindow`의 `breakSoundClip` / 유리 파편 레트로 톤)가 독립적으로 재생됨.
+- [x] `ImageWindow.cs` 열쇠 이미지 드래그 추출 및 쓰레기통 드롭 이벤트 구현:
+  - `IsBorderBroken == true`일 때 열쇠 이미지를 마우스 드래그로 창 밖으로 빼낼 수 있으며(`BeginKeyDrag`/`UpdateKeyDrag`/`EndKeyDrag`), 쓰레기통 데스크톱 아이콘(`Icon_recycle-bin` / `ItemId == "recycle-bin"`) 또는 쓰레기통 창(`"recycle-bin"`)에 드롭 시 `Debug.Log("[KeyToTrash] 열쇠 이미지를 쓰레기통에 드롭했습니다! (이벤트 발생)")` 출력 및 확장 가능한 이벤트(`onKeyDroppedToRecycleBin`, `OnKeyDroppedToRecycleBin`, `OnAnyKeyDroppedToRecycleBin`) 호출.
+- [x] Unity CLI (`6000.6.7f1`) EditMode 자동 테스트 검증: `WindowBorderTests`(9건, 다중 선분 무너짐 및 오버레이/사운드 분리 포함) 및 `InternetWindowTests`(9건) 총 **18/18 통과** 확인.
+- [ ] Unity 에디터 Play Mode에서 총 발사 → 다중 선분 테두리 안쪽 무너짐 연출 → 깨진 오버레이 확인 → 열쇠 드래그 앤 드롭(쓰레기통) 시각 확인.

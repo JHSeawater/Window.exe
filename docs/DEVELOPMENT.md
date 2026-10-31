@@ -1039,13 +1039,36 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
   - 원반은 숫자 `1, 2, 3`을 가지며, 자신의 아래에는 자신보다 작은 숫자의 원반만 올 수 있다(`CanMoveDisk`).
   - 막대를 클릭하면 맨 위 원반이 위로 살짝 뜨고(`SelectedPeg`), 다른 막대를 클릭하면 대상 막대의 맨 위로 즉시 순간이동하며 짧은 떨림(Shake) 이펙트와 사운드를 재생한다.
   - `WINDOW.exe` 창이 인터넷 창과 겹쳐진 상태(`IsHanoiBlockedByWindowExe()`)에서는 하노이 탑 조작을 차단한다.
-- **Phase 2 검색 기록의 `WindowBack` / `WindowFront` 분리 렌더링 및 완전 가림 해독:**
-  - Phase 2에서 텍스트를 제외한 비-텍스트 요소(브라우저 배경 `backArtwork`, 검색창 틀/배경/화살표 배경, 드롭다운 목록 틀/배경/행 배경)는 `WindowBack`(`SecondarySortingLayerName`)에서 렌더링하여 `WINDOW.exe`로 겹쳐 보았을 때 창이 뚫려 보이지 않게 한다.
-  - 텍스트 요소(제목, 검색창 라벨, 화살표, 드롭다운 3개 행 텍스트)는 `WindowFront`와 `WindowBack` 양쪽에서 모두 렌더링한다.
-  - 해독 전(`IsDecoded == false`)에는 `WindowBack`의 3번째 행에 `"◷  총"`을 렌더링하고, `WindowFront`에는 불투명 가림막(`frontThirdRowMask`)과 깨진 글리치 텍스트(`"◷  " + scrambledHistory`)를 렌더링하여 평상시에는 깨진 텍스트만 보이게 한다.
-  - `WINDOW.exe` 뷰포트가 3번째 검색 결과를 완전히 가려 온전한 `WindowBack` 렌더로 바뀌면(`TryRevealThirdHistory()`), `decoded = true`로 전환되어 `WindowFront`의 3번째 행 내용도 `WindowBack`과 동일하게 `"◷  총"`으로 영구 동기화된다.
+- **인터넷 메인 화면 Dual-Layer (`WindowFront` & `WindowBack`) 완전 동기화 및 해독 분기:**
+  - 브라우저 배경(`artwork`/`backArtwork` 및 `Window` 기본 `secondary` 스프라이트)과 검색 UI 패널(검색창 테두리·채우기, 화살표 채우기, 드롭다운 목록 테두리·채우기, 행 배경)이 `WindowFront`(Primary)와 `WindowBack`(Secondary) 양쪽 모두에 대칭으로 생성·배치·활성화된다.
+  - 이로 인해 `WINDOW.exe` 투시 시 `WindowBack`에서 창이 검게 뚫리거나 배경·패널이 누락되지 않고 Primary와 Secondary에서 메인 화면이 동일하게 렌더링된다.
+  - 퍼즐 투시 비밀 요소만 양 레이어에서 의도대로 분기 유지:
+    - Phase 1: `WindowFront`는 동일 크기·색상의 블라인드 원반, `WindowBack`은 서로 다른 크기·색상의 원반(`diskBackRenderers`).
+    - Phase 2: `WindowFront` 3번째 행은 불투명 가림막(`frontThirdRowMask`)과 깨진 글리치 텍스트(`"◷  " + scrambledHistory`), `WindowBack`은 온전한 `"◷  총"` 텍스트. `WINDOW.exe`로 완전히 가려 해독되면 `WindowFront`도 `"◷  총"`으로 동기화.
+    - Phase 3: 결과 이미지(404 / 총)는 `WindowFront`와 `WindowBack` 양쪽에 동일하게 활성화.
 - **Phase 3 검색 결과 화면 (404 / 총 이미지 덧씌움):**
   - 검색 기록 클릭 시 별도 팝업 창을 열지 않고, 인터넷 창 내부에서 검색 UI를 숨기고 해당 결과 화면으로 직접 전환한다. 뒤로가기는 지원하지 않는다.
   - **404 결과 (`Result404`):** 총을 제외한 검색 기록(1·2번째) 클릭 시 전환되며, 인터넷 창 위에 `notFound404Sprite`를 덧씌운다. 인스펙터에서 `notFound404Size` 및 `notFound404Offset`으로 크기와 위치를 수동 조절할 수 있다.
   - **총 결과 (`ResultGun`):** 해독된 3번째 검색 기록("총") 클릭 시 전환되며, 인터넷 창 위에 `gunResultSprite`를 덧씌운다. 인스펙터에서 `gunResultSize` 및 `gunResultOffset`으로 크기와 위치를 수동 조절할 수 있다.
   - 두 결과 이미지 모두 `WindowFront`와 `WindowBack` 양쪽 렌더러에 배치되어, `WINDOW.exe` 창을 위에 올려놓아도 창이 뚫리지 않고 이미지가 정상적으로 투시된다. 미할당 시에는 렌더러가 비활성화된다.
+
+## 19. 총 발사·열쇠 창 오른쪽 테두리 파괴 및 열쇠 드래그 앤 드롭 (`InternetWindow` · `Window` · `ImageWindow`)
+
+- **총 발사 및 중첩·방향 조건 (`InternetWindow.cs`):**
+  - 인터넷 창 Phase 3(`InternetPhase.ResultGun`)의 총(`Gun Chong.png`, 항상 왼쪽을 향함)을 클릭했을 때 `TryShootGun()`이 호출된다.
+  - 발사 성립 조건(`CanShootKeyWindow`):
+    1. 총구 좌표(`GetGunMuzzleWorldPosition()`, 기본 정규화 오프셋 `(-0.38, 0.24)`)가 `WINDOW.exe`(`WindowExeWindow`, ID `"window"`)의 `OuterBounds` 내부에 덮여 있어야 한다.
+    2. 열쇠 창(`ImageWindow`, 기본 ID `"key-image"`) 역시 `WINDOW.exe`의 `OuterBounds`와 겹쳐 덮여 있어야 한다.
+    3. 총이 왼쪽을 향하므로 열쇠 창의 바운드가 총구 좌표의 **왼쪽**(`keyBounds.xMin < muzzlePos.x && keyBounds.center.x < muzzlePos.x`)에 위치해야 한다.
+  - 조건 충족 시 총이 발사되며 총 이미지가 반동으로 흔들리고(`gunShakeDuration`, `gunShakeMagnitude`), 발사 사운드(`HanoiSoundType.Shot` / `gunShotClip`, `Assets/Sounds/빵야.mp3`)가 재생되며, 대상 열쇠 창의 `BreakRightBorder()`를 호출한다.
+- **열쇠 창 오른쪽 테두리 파괴 및 다중 선분 안쪽 무너짐 연출 (`Window.cs` · `ImageWindow.cs`):**
+  - `Window.SetRightBorderBroken(true)` 호출 시 `UpdateBorderLayout(Vector2 value)`에서 별도 덮개 없이 `borderRenderer`의 가로 추가 두께를 `borderThickness * 2f`에서 `borderThickness`로 줄이고(`size.x = value.x + borderThickness`), `localPosition.x`를 `-borderThickness / 2f`로 이동시킨다. 이로써 왼쪽·위·아래 테두리는 그대로 유지되고 오른쪽 테두리만 창 본문 우측 끝(`+value.x / 2f`)과 일치하여 사라진다.
+  - **다중 선분 안쪽 무너짐 연출:** 오른쪽 테두리 전체 높이를 여러 개(기본 7개)의 선분 조각(`DebrisPiece`)으로 슬라이스하여, 총알의 운동량에 맞춰 **창 안쪽(왼쪽, `-X`, `-4.6 ~ -2.4`)**으로 속도감 있게 튀어 날아가며 회전(`±550°/s`)하고 강한 중력(`gravity = -22f`)을 받아 아래로 쏟아져 내리며 페이드아웃된다.
+  - `ImageWindow`는 `WindowBack`(`Secondary`)에도 테두리(`secondaryBorder`), 흰색 배경(`SecondaryRenderer`), 열쇠 이미지(`secondaryImage`), 다중 선분 파편(`debrisPieces[i].back`)을 미러링하여 `WINDOW.exe`로 덮었을 때 창이 뚫리지 않도록 보장한다.
+  - `BreakRightBorder()` 실행 시 피격 흔들림(`IsShakeActive`)을 재생하고 파괴 상태(`IsBorderBroken = true`)로 전환된다.
+- **키 창 깨진 텍스처 오버레이 및 효과음 분리 (`ImageWindow.cs`):**
+  - **깨진 텍스처 오버레이:** `brokenOverlaySprite` 필드를 지원하여 인스펙터에서 수동 할당하거나 `SetBrokenOverlaySprite`로 교체할 수 있다. 미할당 시에도 절차적 크랙 텍스처를 폴백으로 제공하여 즉시 시각 확인이 가능하며, `WindowFront`와 `WindowBack` 듀얼 레이어 모두에 오버레이(`order + 3`)되어 투시 중에도 선명하게 표시된다.
+  - **발사음과 깨지는 소리 분리:** 총 발사 시에는 `InternetWindow`에서 발사음(`빵야`)을 재생하고, 열쇠 창이 피격되어 깨질 때에는 `ImageWindow`의 `breakSoundClip`(또는 유리 깨지는 고주파 노이즈 폴백 클립)을 통해 깨지는 소리가 별도로 재생된다.
+- **열쇠 이미지 드래그 추출 및 쓰레기통 드롭 이벤트 (`ImageWindow.cs`):**
+  - `IsBorderBroken == true` 상태에서 열쇠 이미지를 마우스로 누르고 드래그하면 창 밖으로 열쇠 이미지를 꺼내 이동할 수 있다(`IsDraggingKey`, `DraggedKeyProxy`가 `WindowFront` 및 `WindowBack` 최상단 `sortingOrder = 30000`에 표시).
+  - 드래그한 열쇠를 바탕화면의 쓰레기통 아이콘(`DesktopIconView.ItemId == "recycle-bin"` 또는 `Icon_recycle-bin`)이나 쓰레기통 창(`"recycle-bin"`) 위에 드롭하면 열쇠가 소비(`IsKeyExtracted = true`)되며 `Debug.Log("[KeyToTrash] 열쇠 이미지를 쓰레기통에 드롭했습니다! (이벤트 발생)")` 출력과 함께 확장 가능한 이벤트(`onKeyDroppedToRecycleBin`, `OnKeyDroppedToRecycleBin`, `ImageWindow.OnAnyKeyDroppedToRecycleBin`)가 호출된다. 쓰레기통이 아닌 곳에 놓으면 원래 창 안의 위치로 복귀한다.

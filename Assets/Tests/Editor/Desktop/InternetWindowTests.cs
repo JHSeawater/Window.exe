@@ -20,6 +20,7 @@ namespace WindowExe.Desktop.Tests
         {
             wifiGo = new GameObject("WifiConnection");
             wifi = wifiGo.AddComponent<WifiConnection>();
+            WifiConnection.ResetInstance(wifi);
             wifi.SetConnected(false);
 
             managerGo = new GameObject("WindowManager");
@@ -28,6 +29,7 @@ namespace WindowExe.Desktop.Tests
             internetPrefabGo = new GameObject("InternetPrefab");
             internetPrefabGo.SetActive(false);
             var internetPrefab = internetPrefabGo.AddComponent<InternetWindow>();
+            internetPrefab.SetWifi(wifi);
 
             windowExePrefabGo = new GameObject("WindowExePrefab");
             windowExePrefabGo.SetActive(false);
@@ -38,11 +40,14 @@ namespace WindowExe.Desktop.Tests
 
             internet = manager.Open("internet") as InternetWindow;
             Assert.IsNotNull(internet);
+            internet.SetWifi(wifi);
         }
 
         [TearDown]
         public void TearDown()
         {
+            WifiConnection.ResetInstance(null);
+
             if (manager != null)
                 manager.ResetWindows();
 
@@ -227,16 +232,23 @@ namespace WindowExe.Desktop.Tests
             Assert.IsTrue(internet.DropdownOpen);
             Assert.IsFalse(internet.IsDecoded);
 
-            // 비-텍스트 요소(브라우저 배경, 검색창, 목록 배경)는 WindowBack에서 렌더링
+            // 브라우저 배경 및 검색 UI 비-텍스트 요소는 WindowFront와 WindowBack 양쪽에서 동일하게 렌더링
+            var frontArtwork = internet.transform.Find("Primary/IE_BrowserArtwork")?.GetComponent<SpriteRenderer>();
             var backArtwork = internet.transform.Find("Secondary/IE_BackContent/IE_BackBrowserArtwork")?.GetComponent<SpriteRenderer>();
+            var frontListBorder = internet.transform.Find("Primary/IE_ListBorder")?.GetComponent<SpriteRenderer>();
             var listBorder = internet.transform.Find("Secondary/IE_BackContent/IE_ListBorder")?.GetComponent<SpriteRenderer>();
             var frontMask = internet.transform.Find("Primary/IE_FrontThirdRowMask")?.GetComponent<SpriteRenderer>();
 
+            Assert.IsNotNull(frontArtwork);
             Assert.IsNotNull(backArtwork);
+            Assert.IsNotNull(frontListBorder);
             Assert.IsNotNull(listBorder);
             Assert.IsNotNull(frontMask);
+            Assert.IsTrue(frontArtwork.gameObject.activeInHierarchy);
             Assert.IsTrue(backArtwork.gameObject.activeInHierarchy);
+            Assert.AreEqual(Window.PrimarySortingLayerName, frontArtwork.sortingLayerName);
             Assert.AreEqual(Window.SecondarySortingLayerName, backArtwork.sortingLayerName);
+            Assert.AreEqual(Window.PrimarySortingLayerName, frontListBorder.sortingLayerName);
             Assert.AreEqual(Window.SecondarySortingLayerName, listBorder.sortingLayerName);
             Assert.IsTrue(frontMask.gameObject.activeInHierarchy);
             Assert.AreEqual(Window.PrimarySortingLayerName, frontMask.sortingLayerName);
@@ -344,6 +356,79 @@ namespace WindowExe.Desktop.Tests
                 Object.DestroyImmediate(tex404);
                 Object.DestroyImmediate(spriteGun);
                 Object.DestroyImmediate(texGun);
+            }
+        }
+
+        [Test]
+        public void Phase3GunFiresAndBreaksKeyWindowBorderOnlyWhenMuzzleAndKeyCoveredByWindowExeAndKeyOnLeft()
+        {
+            var texGun = new Texture2D(2, 2);
+            var spriteGun = Sprite.Create(texGun, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+            var texKey = new Texture2D(2, 2);
+            var spriteKey = Sprite.Create(texKey, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
+
+            var keyPrefabGo = new GameObject("KeyWindowPrefab");
+            keyPrefabGo.SetActive(false);
+            var keyPrefab = keyPrefabGo.AddComponent<ImageWindow>();
+
+            try
+            {
+                manager.RegisterPrefab("key-image", keyPrefab);
+
+                wifi.SetConnected(true);
+                internet.SetGunResultSprite(spriteGun);
+                internet.MoveTo(new Vector2(4f, 0f));
+
+                // 해독 후 총 화면(ResultGun)으로 진입
+                var windowExe = manager.Open("window");
+                Assert.IsNotNull(windowExe);
+                internet.SetDropdownOpen(true);
+                Rect row2Rect = internet.GetSearchRowWorldRect(2);
+                windowExe.MoveTo(row2Rect.center);
+                Assert.IsTrue(internet.TryRevealThirdHistory());
+                internet.ChooseHistory(2);
+                Assert.AreEqual(InternetWindow.InternetPhase.ResultGun, internet.CurrentPhase);
+
+                var keyWindow = manager.Open("key-image") as ImageWindow;
+                Assert.IsNotNull(keyWindow);
+                keyWindow.SetPrimarySprite(spriteKey);
+
+                // 1. 열쇠 창이 총구 오른쪽에 있으면 발사 불가
+                keyWindow.MoveTo(new Vector2(8f, 0f));
+                windowExe.Resize(new Vector2(16f, 8f));
+                windowExe.MoveTo(new Vector2(4f, 0f));
+                Assert.IsFalse(internet.TryShootGun());
+                Assert.IsFalse(keyWindow.IsBorderBroken);
+
+                // 2. 열쇠 창이 총구 왼쪽에 있지만 WINDOW.exe가 덮고 있지 않으면 발사 불가
+                keyWindow.MoveTo(new Vector2(-3f, 0f));
+                windowExe.MoveTo(new Vector2(20f, 20f));
+                Assert.IsFalse(internet.TryShootGun());
+                Assert.IsFalse(keyWindow.IsBorderBroken);
+
+                // 3. 열쇠 창이 총구 왼쪽에 있고 WINDOW.exe가 총구와 열쇠 창을 모두 덮으면 발사 성공 & 열쇠 창 우측 테두리 파손!
+                Vector2 muzzlePos = internet.GetGunMuzzleWorldPosition();
+                Assert.Less(keyWindow.OuterBounds.center.x, muzzlePos.x);
+
+                windowExe.Resize(new Vector2(12f, 6f));
+                windowExe.MoveTo(new Vector2((muzzlePos.x + keyWindow.OuterBounds.center.x) * 0.5f, muzzlePos.y));
+
+                Assert.IsTrue(internet.CanShootKeyWindow(out var detectedKeyWindow));
+                Assert.AreEqual(keyWindow, detectedKeyWindow);
+                Assert.IsTrue(internet.TryShootGun());
+                Assert.IsTrue(keyWindow.IsBorderBroken);
+                Assert.IsTrue(keyWindow.HasActiveDebris);
+                Assert.IsTrue(keyWindow.IsShakeActive);
+                Assert.IsTrue(internet.IsGunShaking);
+            }
+            finally
+            {
+                if (keyPrefabGo != null)
+                    Object.DestroyImmediate(keyPrefabGo);
+                Object.DestroyImmediate(spriteGun);
+                Object.DestroyImmediate(texGun);
+                Object.DestroyImmediate(spriteKey);
+                Object.DestroyImmediate(texKey);
             }
         }
     }

@@ -21,7 +21,8 @@ namespace WindowExe.Desktop.Desktop.Window
             Select,
             Move,
             Error,
-            Connected
+            Connected,
+            Shot
         }
 
         public const int HanoiPegCount = 3;
@@ -62,6 +63,11 @@ namespace WindowExe.Desktop.Desktop.Window
         [SerializeField] private Vector2 gunResultSize = new Vector2(7f, 4.2f);
         [SerializeField] private Vector2 gunResultOffset = Vector2.zero;
 
+        [Header("Phase 3 - Gun Shooting")]
+        [SerializeField] private string targetKeyWindowId = "key-image";
+        [SerializeField] private Vector2 gunMuzzleNormalizedOffset = new Vector2(-0.38f, 0.24f);
+        [SerializeField] private AudioClip gunShotClip;
+
         [Header("Offline Network UI")]
         [SerializeField] private Sprite offlineIconSprite;
         [SerializeField] private Color offlineIconTint = Color.white;
@@ -94,6 +100,7 @@ namespace WindowExe.Desktop.Desktop.Window
         private static AudioClip fallbackMoveClip;
         private static AudioClip fallbackErrorClip;
         private static AudioClip fallbackConnectedClip;
+        private static AudioClip fallbackGunShotClip;
 
         private Transform contentRoot;
         private Transform backContentRoot;
@@ -101,13 +108,20 @@ namespace WindowExe.Desktop.Desktop.Window
 
         // WindowFront / WindowBack 렌더러
         private SpriteRenderer artwork;
+        private SpriteRenderer frontSearchBorder;
+        private SpriteRenderer frontSearchFill;
+        private SpriteRenderer frontArrowFill;
+        private SpriteRenderer frontListBorder;
+        private SpriteRenderer frontListFill;
+        private readonly SpriteRenderer[] frontRowBackgrounds = new SpriteRenderer[3];
+        private SpriteRenderer frontThirdRowMask;
+
         private SpriteRenderer searchBorder;
         private SpriteRenderer searchFill;
         private SpriteRenderer arrowFill;
         private SpriteRenderer listBorder;
         private SpriteRenderer listFill;
         private readonly SpriteRenderer[] rowBackgrounds = new SpriteRenderer[3];
-        private SpriteRenderer frontThirdRowMask;
 
         // Phase 3 결과 화면 - WindowFront & WindowBack
         private SpriteRenderer notFound404Front;
@@ -178,12 +192,17 @@ namespace WindowExe.Desktop.Desktop.Window
         private bool dropdownOpen;
         private bool decoded;
         private bool lastOnline;
+        private float gunShakeTimer;
         private InternetPhase phase3Result = InternetPhase.SearchHistory;
 
         private string selectedText = "검색 기록을 선택하세요";
 
+        public event Action<ImageWindow> OnGunFired;
+
         public bool IsDecoded => decoded;
         public bool DropdownOpen => dropdownOpen;
+        public bool IsGunShaking => gunShakeTimer > 0f;
+        public string TargetKeyWindowId { get => targetKeyWindowId; set => targetKeyWindowId = value; }
         public InternetPhase CurrentPhase
         {
             get
@@ -258,6 +277,11 @@ namespace WindowExe.Desktop.Desktop.Window
                 var connection = GetWifiConnection();
                 return connection != null ? connection.IsConnected : localConnected;
             }
+        }
+
+        public void SetWifi(global::WindowExe.Desktop.WifiConnection connection)
+        {
+            wifi = connection;
         }
 
         private global::WindowExe.Desktop.WifiConnection GetWifiConnection()
@@ -443,11 +467,27 @@ namespace WindowExe.Desktop.Desktop.Window
                     backContentRoot = backRoot.transform;
                 }
 
-                // WindowFront 기본 브라우저 배경 (Phase 1용) 및 3번째 행 해독 전 가림막
+                // WindowFront 브라우저 배경 및 검색/드롭다운 UI 패널
                 artwork = CreatePanel(contentRoot, "IE_BrowserArtwork", Color.white, PrimarySortingLayerName);
+                frontSearchBorder = CreatePanel(contentRoot, "IE_SearchBorder", new Color(.35f, .35f, .35f), PrimarySortingLayerName);
+                frontSearchFill = CreatePanel(contentRoot, "IE_SearchFill", Color.white, PrimarySortingLayerName);
+                frontArrowFill = CreatePanel(contentRoot, "IE_ArrowFill", new Color(.80f, .80f, .80f), PrimarySortingLayerName);
+                frontListBorder = CreatePanel(contentRoot, "IE_ListBorder", new Color(.35f, .35f, .35f), PrimarySortingLayerName);
+                frontListFill = CreatePanel(contentRoot, "IE_ListFill", Color.white, PrimarySortingLayerName);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    frontRowBackgrounds[i] = CreatePanel(
+                        contentRoot,
+                        "IE_RowBackground_" + i,
+                        i % 2 == 0 ? Color.white : new Color(.94f, .95f, .97f),
+                        PrimarySortingLayerName
+                    );
+                }
+
                 frontThirdRowMask = CreatePanel(contentRoot, "IE_FrontThirdRowMask", Color.white, PrimarySortingLayerName);
 
-                // Phase 2 비-텍스트 요소(브라우저 배경, 검색창, 드롭다운 목록/배경)는 WindowBack에서 렌더링
+                // WindowBack 브라우저 배경 및 검색/드롭다운 UI 패널
                 backArtwork = CreatePanel(backContentRoot, "IE_BackBrowserArtwork", Color.white, SecondarySortingLayerName);
                 searchBorder = CreatePanel(backContentRoot, "IE_SearchBorder", new Color(.35f, .35f, .35f), SecondarySortingLayerName);
                 searchFill = CreatePanel(backContentRoot, "IE_SearchFill", Color.white, SecondarySortingLayerName);
@@ -668,8 +708,10 @@ namespace WindowExe.Desktop.Desktop.Window
                 ApplyPhase3Sprites();
                 HideDefaultArtwork();
 
-                // 기존 Secondary 배경 제거
-                SetSecondarySprite(null);
+                // Secondary 기본 스프라이트도 브라우저 배경으로 동기화
+                Sprite bgSprite = browserBackgroundSprite != null ? browserBackgroundSprite : WhitePixel();
+                SetSecondarySprite(bgSprite);
+                SetSecondaryColor(browserBackgroundSprite != null ? browserBackgroundTint : Color.white);
 
                 var oldFooter = contentRoot.Find("IE_Footer");
                 if (oldFooter != null)
@@ -754,6 +796,9 @@ namespace WindowExe.Desktop.Desktop.Window
                 backArtwork.sprite = targetSprite;
                 backArtwork.color = targetColor;
             }
+
+            SetSecondarySprite(targetSprite);
+            SetSecondaryColor(targetColor);
 
             if (browserBackgroundSprite == null)
             {
@@ -882,6 +927,10 @@ namespace WindowExe.Desktop.Desktop.Window
 
             searchRect = CenterRect(0f, searchY, searchWidth, fieldHeight);
 
+            PlaceSprite(frontSearchBorder, 0f, searchY, searchWidth, fieldHeight);
+            PlaceSprite(frontSearchFill, -.10f, searchY, searchWidth - .24f, fieldHeight - .05f);
+            PlaceSprite(frontArrowFill, searchWidth * .5f - .14f, searchY, .25f, fieldHeight - .05f);
+
             PlaceSprite(searchBorder, 0f, searchY, searchWidth, fieldHeight);
             PlaceSprite(searchFill, -.10f, searchY, searchWidth - .24f, fieldHeight - .05f);
             PlaceSprite(arrowFill, searchWidth * .5f - .14f, searchY, .25f, fieldHeight - .05f);
@@ -895,6 +944,9 @@ namespace WindowExe.Desktop.Desktop.Window
             float listY = firstRowY - rowHeight;
             float listHeight = rowHeight * 3f + .04f;
 
+            PlaceSprite(frontListBorder, 0f, listY, searchWidth, listHeight);
+            PlaceSprite(frontListFill, 0f, listY, searchWidth - .04f, listHeight - .04f);
+
             PlaceSprite(listBorder, 0f, listY, searchWidth, listHeight);
             PlaceSprite(listFill, 0f, listY, searchWidth - .04f, listHeight - .04f);
 
@@ -903,6 +955,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 float y = firstRowY - rowHeight * i;
                 rowRects[i] = CenterRect(0f, y, searchWidth, rowHeight);
 
+                PlaceSprite(frontRowBackgrounds[i], 0f, y, searchWidth - .06f, rowHeight - .03f);
                 PlaceSprite(rowBackgrounds[i], 0f, y, searchWidth - .06f, rowHeight - .03f);
                 PlaceText(rowLabels[i], 0f, y, searchWidth - .30f, rowHeight * .88f);
                 PlaceText(backRowLabels[i], 0f, y, searchWidth - .30f, rowHeight * .88f);
@@ -1153,7 +1206,18 @@ namespace WindowExe.Desktop.Desktop.Window
             SetLayer(offlineIconBack, SecondarySortingLayerName, baseOrder + 6);
             SetLayer(backOfflineLabel, SecondarySortingLayerName, baseOrder + 6);
 
-            // Phase 2: 검색창 및 드롭다운의 비-텍스트 요소는 WindowBack에서 렌더링
+            // Phase 2: WindowFront 검색창 및 드롭다운 패널
+            SetLayer(frontSearchBorder, PrimarySortingLayerName, baseOrder + 2);
+            SetLayer(frontSearchFill, PrimarySortingLayerName, baseOrder + 3);
+            SetLayer(frontArrowFill, PrimarySortingLayerName, baseOrder + 4);
+
+            SetLayer(frontListBorder, PrimarySortingLayerName, baseOrder + 6);
+            SetLayer(frontListFill, PrimarySortingLayerName, baseOrder + 7);
+
+            for (int i = 0; i < 3; i++)
+                SetLayer(frontRowBackgrounds[i], PrimarySortingLayerName, baseOrder + 8);
+
+            // Phase 2: WindowBack 검색창 및 드롭다운 패널
             SetLayer(searchBorder, SecondarySortingLayerName, baseOrder + 2);
             SetLayer(searchFill, SecondarySortingLayerName, baseOrder + 3);
             SetLayer(arrowFill, SecondarySortingLayerName, baseOrder + 4);
@@ -1225,6 +1289,11 @@ namespace WindowExe.Desktop.Desktop.Window
                 hanoiBackdropBack == null ||
                 pegBaseFront == null ||
                 pegBaseBack == null ||
+                frontSearchBorder == null ||
+                frontSearchFill == null ||
+                frontArrowFill == null ||
+                frontListBorder == null ||
+                frontListFill == null ||
                 searchBorder == null ||
                 searchFill == null ||
                 arrowFill == null ||
@@ -1263,8 +1332,13 @@ namespace WindowExe.Desktop.Desktop.Window
 
             for (int i = 0; i < 3; i++)
             {
-                if (rowBackgrounds[i] == null || rowLabels[i] == null || backRowLabels[i] == null)
+                if (frontRowBackgrounds[i] == null ||
+                    rowBackgrounds[i] == null ||
+                    rowLabels[i] == null ||
+                    backRowLabels[i] == null)
+                {
                     return false;
+                }
             }
 
             return true;
@@ -1305,6 +1379,12 @@ namespace WindowExe.Desktop.Desktop.Window
             if (shakingUpdated)
                 ApplyDiskVisualsAndPositions();
 
+            if (gunShakeTimer > 0f)
+            {
+                gunShakeTimer = Mathf.Max(0f, gunShakeTimer - Time.unscaledDeltaTime);
+                UpdateGunShakePosition();
+            }
+
             if (online && dropdownOpen && !decoded)
             {
                 TryRevealThirdHistory();
@@ -1328,6 +1408,18 @@ namespace WindowExe.Desktop.Desktop.Window
 
             Vector2 local = transform.InverseTransformPoint(mouseWorld);
 
+            if (online && phase3Result == InternetPhase.ResultGun)
+            {
+                if (!TitleContains(mouseWorld) &&
+                    ButtonAt(mouseWorld) < 0 &&
+                    !IsCoveredByBlockingWindowForGun(mouseWorld) &&
+                    GetGunWorldRect().Contains(mouseWorld))
+                {
+                    TryShootGun();
+                }
+                return;
+            }
+
             if (IsCoveredByFrontWindow(mouseWorld))
                 return;
 
@@ -1349,8 +1441,8 @@ namespace WindowExe.Desktop.Desktop.Window
                 return;
             }
 
-            // Phase 3: 결과 화면(404 / 총)에서는 검색창/드롭다운 조작 없음
-            if (phase3Result == InternetPhase.Result404 || phase3Result == InternetPhase.ResultGun)
+            // Phase 3: 404 결과 화면에서는 검색창/드롭다운 조작 없음
+            if (phase3Result == InternetPhase.Result404)
                 return;
 
             // Phase 2: 검색 기록 화면
@@ -1523,6 +1615,7 @@ namespace WindowExe.Desktop.Desktop.Window
                 HanoiSoundType.Move => diskMoveClip != null ? diskMoveClip : GetFallbackClip(HanoiSoundType.Move),
                 HanoiSoundType.Error => diskErrorClip != null ? diskErrorClip : GetFallbackClip(HanoiSoundType.Error),
                 HanoiSoundType.Connected => networkConnectedClip != null ? networkConnectedClip : GetFallbackClip(HanoiSoundType.Connected),
+                HanoiSoundType.Shot => gunShotClip != null ? gunShotClip : GetFallbackClip(HanoiSoundType.Shot),
                 _ => null
             };
 
@@ -1560,6 +1653,9 @@ namespace WindowExe.Desktop.Desktop.Window
                 HanoiSoundType.Connected => fallbackConnectedClip != null
                     ? fallbackConnectedClip
                     : (fallbackConnectedClip = CreateRetroToneClip("HanoiConnected", 0.18f, 523.25f, 1046.5f, 0.26f)),
+                HanoiSoundType.Shot => fallbackGunShotClip != null
+                    ? fallbackGunShotClip
+                    : (fallbackGunShotClip = CreateRetroToneClip("GunShot", 0.14f, 440f, 75f, 0.36f)),
                 _ => null
             };
         }
@@ -1668,6 +1764,199 @@ namespace WindowExe.Desktop.Desktop.Window
             }
 
             RefreshUI();
+        }
+
+        public Rect GetGunWorldRect()
+        {
+            Rect local = CenterRect(gunResultOffset.x, gunResultOffset.y, gunResultSize.x, gunResultSize.y);
+            return WorldRect(local, transform);
+        }
+
+        public Vector2 GetGunMuzzleWorldPosition()
+        {
+            Vector2 localMuzzle = new Vector2(
+                gunResultOffset.x + gunResultSize.x * gunMuzzleNormalizedOffset.x,
+                gunResultOffset.y + gunResultSize.y * gunMuzzleNormalizedOffset.y
+            );
+            Vector3 world = transform.TransformPoint(new Vector3(localMuzzle.x, localMuzzle.y, 0f));
+            return new Vector2(world.x, world.y);
+        }
+
+        public Rect GetGunMuzzleWorldRect()
+        {
+            Vector2 localMuzzle = new Vector2(
+                gunResultOffset.x + gunResultSize.x * gunMuzzleNormalizedOffset.x,
+                gunResultOffset.y + gunResultSize.y * gunMuzzleNormalizedOffset.y
+            );
+            Rect local = CenterRect(
+                localMuzzle.x,
+                localMuzzle.y,
+                Mathf.Max(0.4f, gunResultSize.x * 0.25f),
+                Mathf.Max(0.4f, gunResultSize.y * 0.35f)
+            );
+            return WorldRect(local, transform);
+        }
+
+        public bool CanShootKeyWindow(out ImageWindow targetKeyWindow)
+        {
+            targetKeyWindow = null;
+
+            if (CurrentPhase != InternetPhase.ResultGun)
+                return false;
+
+            var manager = Manager != null ? Manager : WindowManager.Instance;
+            if (manager == null)
+                return false;
+
+            // 1. 대상 열쇠 창(ImageWindow) 탐색
+            if (!string.IsNullOrEmpty(targetKeyWindowId))
+            {
+                var keyProc = manager.GetProcess(targetKeyWindowId);
+                if (keyProc != null &&
+                    keyProc.State != WindowState.Minimized &&
+                    keyProc.Instance is ImageWindow img &&
+                    img.gameObject.activeInHierarchy)
+                {
+                    targetKeyWindow = img;
+                }
+            }
+
+            if (targetKeyWindow == null)
+            {
+                foreach (var proc in manager.ActiveProcesses)
+                {
+                    if (proc != null &&
+                        proc.State != WindowState.Minimized &&
+                        proc.Instance is ImageWindow img &&
+                        img.gameObject.activeInHierarchy)
+                    {
+                        targetKeyWindow = img;
+                        break;
+                    }
+                }
+            }
+
+            if (targetKeyWindow == null)
+                return false;
+
+            Vector2 muzzlePos = GetGunMuzzleWorldPosition();
+            Rect muzzleRect = GetGunMuzzleWorldRect();
+            Rect keyBounds = GetWindowWorldRect(targetKeyWindow);
+
+            // 2. 방향 조건: 총은 항상 왼쪽을 향하므로 총구 좌표의 왼쪽에 열쇠 창 바운드가 존재해야 함
+            if (keyBounds.xMin >= muzzlePos.x || keyBounds.center.x >= muzzlePos.x)
+                return false;
+
+            // 3. 중첩 조건: 총구와 열쇠 창이 모두 WINDOW.exe에 덮여 있어야 함
+            foreach (var process in manager.ActiveProcesses)
+            {
+                if (process == null || process.State == WindowState.Minimized || !IsRevealWindowProcess(process))
+                    continue;
+
+                Window windowExe = process.Instance;
+                if (windowExe == null || windowExe == this || !windowExe.gameObject.activeInHierarchy)
+                    continue;
+
+                Rect windowExeBounds = GetWindowWorldRect(windowExe);
+                bool muzzleCovered = windowExeBounds.Contains(muzzlePos) || windowExeBounds.Overlaps(muzzleRect);
+                bool keyCovered = windowExeBounds.Overlaps(keyBounds);
+
+                if (muzzleCovered && keyCovered)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool TryShootGun()
+        {
+            if (!CanShootKeyWindow(out ImageWindow targetKeyWindow) || targetKeyWindow == null)
+                return false;
+
+            gunShakeTimer = shakeDuration * 1.5f;
+            UpdateGunShakePosition();
+            PlayHanoiSound(HanoiSoundType.Shot);
+
+            targetKeyWindow.BreakRightBorder();
+            OnGunFired?.Invoke(targetKeyWindow);
+            return true;
+        }
+
+        private void UpdateGunShakePosition()
+        {
+            if (gunResultFront == null || gunResultBack == null)
+                return;
+
+            float bar = BarHeight;
+            float fullHeight = size.y + bar;
+            float top = size.y * .5f + bar;
+            float contentCenterY = (top - bar - size.y * .5f) * .5f;
+
+            Vector3 basePos = new Vector3(gunResultOffset.x, contentCenterY + gunResultOffset.y, 0f);
+            if (gunShakeTimer > 0f)
+            {
+                float ratio = gunShakeTimer / Mathf.Max(0.0001f, shakeDuration * 1.5f);
+                float recoilX = Mathf.Abs(Mathf.Sin(gunShakeTimer * 85f)) * shakeMagnitude * 1.6f * ratio;
+                float recoilY = Mathf.Cos(gunShakeTimer * 110f) * shakeMagnitude * 0.6f * ratio;
+                Vector3 shaken = basePos + new Vector3(recoilX, recoilY, 0f);
+                gunResultFront.transform.localPosition = shaken;
+                gunResultBack.transform.localPosition = shaken;
+            }
+            else
+            {
+                gunResultFront.transform.localPosition = basePos;
+                gunResultBack.transform.localPosition = basePos;
+            }
+        }
+
+        private bool IsCoveredByBlockingWindowForGun(Vector3 point)
+        {
+            var manager = Manager != null ? Manager : WindowManager.Instance;
+            if (manager == null) return false;
+
+            var displayOrder = manager.DisplayOrder;
+            int myOrderIndex = -1;
+            for (int i = 0; i < displayOrder.Count; i++)
+            {
+                if (displayOrder[i] != null && displayOrder[i].Instance == this)
+                {
+                    myOrderIndex = i;
+                    break;
+                }
+            }
+
+            if (myOrderIndex >= 0)
+            {
+                for (int i = myOrderIndex + 1; i < displayOrder.Count; i++)
+                {
+                    var process = displayOrder[i];
+                    if (process == null || process.State == WindowState.Minimized)
+                        continue;
+
+                    Window other = process.Instance;
+                    if (other == null || other == this || !other.gameObject.activeInHierarchy)
+                        continue;
+
+                    if (IsRevealWindowProcess(process))
+                    {
+                        if (other.TitleContains(point) || other.ButtonAt(point) >= 0 || other.IsPointerOverResizeHandle(point))
+                            return true;
+                        continue;
+                    }
+
+                    Rect bounds = Rect.MinMaxRect(
+                        -other.Size.x * .5f,
+                        -other.Size.y * .5f,
+                        other.Size.x * .5f,
+                        other.Size.y * .5f + other.BarHeight
+                    );
+
+                    if (bounds.Contains(other.transform.InverseTransformPoint(point)))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         private static Rect GetViewportWorldRect(Window window)
@@ -1813,8 +2102,9 @@ namespace WindowExe.Desktop.Desktop.Window
             bool showHanoi = !online;
             bool showOfflineIcon = showHanoi && offlineIconSprite != null;
 
-            // 브라우저 배경: Phase 1에서는 WindowFront(artwork), Phase 2 및 3에서는 WindowBack(backArtwork)에서 렌더링
-            artwork.gameObject.SetActive(showHanoi);
+            // 브라우저 배경: WindowFront(artwork)와 WindowBack(backArtwork) 모두 항상 활성화하여
+            // Primary와 Secondary 양쪽에서 동일한 메인 화면 렌더링 유지
+            artwork.gameObject.SetActive(true);
             backArtwork.gameObject.SetActive(true);
 
             // Phase 1: 네트워크 연결 하노이 탑 UI
@@ -1844,10 +2134,13 @@ namespace WindowExe.Desktop.Desktop.Window
                 diskBackRenderers[d].gameObject.SetActive(showHanoi);
             }
 
-            // Phase 2: 검색 기록 UI (비-텍스트 요소는 WindowBack, 텍스트는 WindowFront와 WindowBack 모두 렌더링)
+            // Phase 2: 검색 기록 UI (비-텍스트 요소와 텍스트를 WindowFront와 WindowBack 양쪽에 모두 렌더링)
             bool showSearch = online && !isPhase3;
             heading.gameObject.SetActive(showSearch);
             backHeading.gameObject.SetActive(showSearch);
+            frontSearchBorder.gameObject.SetActive(showSearch);
+            frontSearchFill.gameObject.SetActive(showSearch);
+            frontArrowFill.gameObject.SetActive(showSearch);
             searchBorder.gameObject.SetActive(showSearch);
             searchFill.gameObject.SetActive(showSearch);
             arrowFill.gameObject.SetActive(showSearch);
@@ -1864,11 +2157,14 @@ namespace WindowExe.Desktop.Desktop.Window
 
             bool showDropdown = showSearch && dropdownOpen;
 
+            frontListBorder.gameObject.SetActive(showDropdown);
+            frontListFill.gameObject.SetActive(showDropdown);
             listBorder.gameObject.SetActive(showDropdown);
             listFill.gameObject.SetActive(showDropdown);
 
             for (int i = 0; i < 3; i++)
             {
+                frontRowBackgrounds[i].gameObject.SetActive(showDropdown);
                 rowBackgrounds[i].gameObject.SetActive(showDropdown);
                 rowLabels[i].gameObject.SetActive(showDropdown);
                 backRowLabels[i].gameObject.SetActive(showDropdown);
