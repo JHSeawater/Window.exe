@@ -827,7 +827,6 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
   - 기본적인 창 프레임(제목 표시줄 드래그 이동, 8방향 리사이즈, 최소화/최대화/닫기 버튼)을 온전히 갖춤.
   - 창 본문(Primary)에는 사용자가 제작한 특수 셰이더 머티리얼(`viewportMaterial`) 하나만 `SpriteRenderer`(Sliced 모드)에 적용하여 창 크기 동기화 렌더링.
   - `SetMaterial(Material)` 및 인스펙터 수동 할당을 통해 셰이더 머티리얼을 유연하게 연결 가능.
-
 ### 16-4. 독립 시선 추적 컴포넌트 (EyeTracker)
 - `Assets/Scripts/Desktop/Window/EyeTracker.cs`:
   - Danger, Watcher 등 눈 오브젝트에 독립적으로 부착하는 시선 추적 컴포넌트 (퍼즐 로직과 분리된 독립 연출 컴포넌트).

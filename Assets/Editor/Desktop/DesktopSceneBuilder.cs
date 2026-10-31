@@ -144,6 +144,7 @@ namespace WindowExe.Desktop.Editor
             Canvas.ForceUpdateCanvases();
             InstallTaskbar(desktop);
             DesktopIntegrationBuilder.Install(desktop);
+            CRTOverlayBuilder.Install(scene);
             desktop.EnsureValidLayout();
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();

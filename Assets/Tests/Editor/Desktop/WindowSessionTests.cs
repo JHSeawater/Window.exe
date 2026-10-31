@@ -1,4 +1,5 @@
-﻿using System.Collections;
+using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -29,11 +30,17 @@ namespace WindowExe.Desktop.Tests
             var manager=WindowManager.Instance;
             Assert.That(manager,Is.Not.Null); manager.Open("memo"); manager.SetLocked(true);
             var id=manager.GetProcess("memo").InstanceId;
+            var crt=CRTOverlay.Instance;
+            Assert.That(crt,Is.Not.Null); crt.SetLevel(3); crt.Spike(20);
             scope.Dispose();
             yield return new ExitPlayMode();
             yield return new EnterPlayMode(false);
             scope=new DesktopInputTestScope();
             manager=WindowManager.Instance;
+            crt=CRTOverlay.Instance;
+            Assert.That(crt,Is.Not.Null); Assert.That(crt.TargetLevel,Is.Zero);
+            Assert.That(crt.Displayed.grain,Is.EqualTo(crt.levels[0].grain).Within(.0001));
+            Assert.That(UnityEngine.Resources.FindObjectsOfTypeAll<UnityEngine.Material>().Count(x=>x.name=="CRTOverlay (Runtime)"),Is.EqualTo(1));
             Assert.That(manager,Is.Not.Null); Assert.That(manager.IsLocked,Is.False); Assert.That(manager.ActiveProcesses,Is.Empty);
             manager.Open("memo"); Assert.That(manager.GetProcess("memo").InstanceId,Is.Not.EqualTo(id));
             var bar=Object.FindAnyObjectByType<TaskbarController>(); Assert.That(bar.Buttons.Count,Is.EqualTo(1));
