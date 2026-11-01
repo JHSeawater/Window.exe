@@ -566,6 +566,7 @@ namespace WindowExe.BossFight.Tests
             yield return KeyPress(Key.F9);yield return new WaitForSecondsRealtime(.65f);AssertReduced(2);
             ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(folder,"reduced-horizontal-verified-phase2.png"));yield return Settle();
             var model=controller.Model;model.Teleport(new BossRect(1500,400,400,300),new BossPoint(1700,540));model.DragBoss(model.Trash);model.ResolveBoundary(successDrop:true);
+            yield return Settle();
             var id=controller.Session.SessionId;var ending=controller.TransferCrtToEnding(id);Assert.That(ending,Is.Not.Null);
             Assert.That(effect.Displayed.streak,Is.EqualTo(effect.levels[2].streak).Within(.00001));
             Assert.That(ending.SetBaseHorizontalNoise(.5f,.5f,.5f),Is.True);Assert.That(controller.CompleteEnding(id),Is.True);
@@ -593,6 +594,22 @@ namespace WindowExe.BossFight.Tests
             int attempt=controller.Model.Attempt;yield return KeyPress(Key.F8);yield return Space(true);
             Assert.That(controller.Model.Attempt,Is.EqualTo(attempt));Assert.That(controller.Model.DownloadPercent,Is.EqualTo(100));Assert.That(results,Is.EqualTo(1));
         }
+        [UnityTest] public IEnumerator DeadlineMovieUsesBadClipLocksCleanupAndDisposesOnExit()
+        {
+            rules.normalEndingVideo=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>("Assets/Art/Screen/Normal_Ending.mp4");
+            rules.badEndingVideo=UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>("Assets/Art/Screen/Bad_Ending.mp4");
+            Assert.That(rules.normalEndingVideo,Is.Not.Null);Assert.That(rules.badEndingVideo,Is.Not.Null);
+            var model=controller.Model;model.Clock.Advance(model.Clock.InputTime+rules.downloadSeconds+1);model.ResolveBoundary();
+            var surface=GameObject.Find("Boss success blackout");Assert.That(surface,Is.Not.Null);
+            var player=surface.GetComponentInChildren<UnityEngine.Video.VideoPlayer>();Assert.That(player.clip,Is.SameAs(rules.badEndingVideo));
+            Assert.That(player.isLooping,Is.False);Assert.That(controller.CompleteEnding(controller.Session.SessionId),Is.False);
+            double deadline=Time.realtimeSinceStartupAsDouble+8;
+            while((!player.isPrepared || player.frame<0) && Time.realtimeSinceStartupAsDouble<deadline)yield return null;
+            Assert.That(player.isPrepared,Is.True);Assert.That(player.frame,Is.GreaterThanOrEqualTo(0));
+            Assert.That(model.Outcome,Is.EqualTo(BossOutcome.BadEnding));Assert.That(model.Respawn(),Is.False);
+            controller.enabled=false;yield return null;
+            Assert.That(player==null,Is.True);Assert.That(surface==null,Is.True);
+        }
         [UnityTest] public IEnumerator EntryRequestOwnsCrtAndCannotBeRepeatedAfterEnding()
         {
             Object.Destroy(controller.gameObject);yield return null;
@@ -600,6 +617,7 @@ namespace WindowExe.BossFight.Tests
             var incoming=CRTOverlay.Instance.AcquireControl();var context=new BossFightEntryContext{RequestId="prelude-1",StartAtPhase2=true,CrtControl=incoming};
             Assert.That(controller.BeginBossFight(context,out var error),Is.True,error);Assert.That(incoming.IsCurrent,Is.False);
             var model=controller.Model;model.Invulnerable=true;model.Teleport(new BossRect(1500,400,400,300),new BossPoint(1700,540));model.DragBoss(model.Trash);model.ResolveBoundary(successDrop:true);
+            yield return Settle();
             string id=controller.Session.SessionId;Assert.That(controller.CompleteEnding(id),Is.True);
             Assert.That(controller.BeginBossFight(context,out error),Is.False);Assert.That(controller.IsActive,Is.False);
         }
@@ -632,11 +650,25 @@ namespace WindowExe.BossFight.Tests
         }
         [UnityTest] public IEnumerator CapturedBossDropNotifiesOnceAndEndingOwnershipSurvives()
         {
+            rules.phase2SuccessSound=UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/깨진삐.mp3");
+            rules.entryErrorSound=UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/에러(띵).mp3");
             var model=controller.Model;int results=0;BossFightResult result=null;
             controller.RestoreCancelled+=r=>{results++;result=r;};
             model.Teleport(new BossRect(1500,400,400,300),new BossPoint(1700,540));yield return Settle();
             yield return Pointer(model.Boss,true);yield return Pointer(model.Trash,true);yield return Pointer(model.Trash,false);
-            Assert.That(model.Outcome,Is.EqualTo(BossOutcome.Success));Assert.That(results,Is.EqualTo(1));Assert.That(result.SessionId,Is.EqualTo(controller.Session.SessionId));
+            Assert.That(model.Outcome,Is.EqualTo(BossOutcome.Success));Assert.That(results,Is.Zero);
+            Assert.That(controller.SuccessPresentationComplete,Is.False);
+            Assert.That(controller.CompleteEnding(controller.Session.SessionId),Is.False);
+            Assert.That(controller.TransferCrtToEnding(controller.Session.SessionId),Is.Null);
+            Assert.That(controller.AllowEnding(controller.Session.SessionId,new[]{"memo"}),Is.False);
+            double frozen=model.Clock.CombatTime,download=model.Clock.DownloadElapsed;int attempt=model.Attempt;
+            controller.ObserveFocus(false);yield return Settle();yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(controller.SuccessPresentationComplete,Is.False);Assert.That(results,Is.Zero);
+            controller.ObserveFocus(true);yield return Settle();yield return KeyPress(Key.F8);yield return Space(true);
+            double deadline=Time.realtimeSinceStartupAsDouble+rules.phase2SuccessSound.length+2;
+            while(!controller.SuccessPresentationComplete && Time.realtimeSinceStartupAsDouble<deadline)yield return null;
+            Assert.That(controller.SuccessPresentationComplete,Is.True);Assert.That(results,Is.EqualTo(1));Assert.That(result.SessionId,Is.EqualTo(controller.Session.SessionId));
+            Assert.That(model.Clock.CombatTime,Is.EqualTo(frozen));Assert.That(model.Clock.DownloadElapsed,Is.EqualTo(download));Assert.That(model.Attempt,Is.EqualTo(attempt));
             double elapsed=model.Clock.DownloadElapsed;yield return Space(true);yield return Settle();
             Assert.That(model.Clock.DownloadElapsed,Is.EqualTo(elapsed));Assert.That(results,Is.EqualTo(1));
             Assert.That(controller.AllowEnding("old session",new[]{"memo"}),Is.False);

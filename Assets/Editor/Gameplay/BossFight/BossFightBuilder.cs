@@ -43,6 +43,9 @@ namespace WindowExe.BossFight.Editor
             rules.phase1EntryEyeFrames=AssetDatabase.LoadAllAssetsAtPath("Assets/Art/Screen/BossFight/Boss_Start_Eyes_frames.png").OfType<Sprite>().OrderBy(sprite=>sprite.name).ToArray();
             rules.phase1EntryFrameSeconds=new double[]{.8,.1,.1,.1,.24,.1,.12,.1,.6,.26,.32,.32,1.2};
             rules.phase1EntryErrorSprite=AssetDatabase.LoadAllAssetsAtPath("Assets/Art/Warning/Error.png").OfType<Sprite>().OrderByDescending(sprite=>sprite.rect.width*sprite.rect.height).FirstOrDefault();
+            rules.entryDownloadSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/삑.mp3");
+            rules.entryEyeSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/띵에러.mp3");
+            rules.entryErrorSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/에러(띵).mp3");
             rules.phaseTransitionDosSprite=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Screen/Dos.png");
             var tags=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
             var layers=tags.FindProperty("layers");int layer=LayerMask.NameToLayer("BossHidden");
@@ -86,6 +89,14 @@ namespace WindowExe.BossFight.Editor
             rules.eyeSprite=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/creature/Iris.png");
             rules.pupilSprite=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/creature/Red_Pupil_2.png");
             rules.phase2BackgroundSprite=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Screen/Phase_1.png");
+            rules.normalEndingVideo=AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>("Assets/Art/Screen/Normal_Ending.mp4");
+            rules.badEndingVideo=AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>("Assets/Art/Screen/Bad_Ending.mp4");
+            rules.phase2SuccessSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/깨진삐.mp3");
+            rules.phase1DropSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/노이즈(깜놀).mp3");
+            rules.phase1EyeContactSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/삐.mp3");
+            rules.phase2EyeContactSound=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/깨진삐.mp3");
+            rules.phase1Music=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/1페이즈 보스.mp3");
+            rules.phase2Music=AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Sounds/2페이즈 보스.mp3");
             rules.phase2SpacebarSprite=AssetDatabase.LoadAllAssetsAtPath("Assets/Art/Warning/Spacebar.png").OfType<Sprite>().OrderByDescending(sprite=>sprite.rect.width*sprite.rect.height).FirstOrDefault();
             if(!(rules.phase2FloatingEyes??System.Array.Empty<BossStaticEye>()).Any(eye=>eye.center.x==960 && eye.center.y==530))
                 rules.phase2FloatingEyes=(rules.phase2FloatingEyes??System.Array.Empty<BossStaticEye>()).Concat(new[]{new BossStaticEye(960,530,70)}).ToArray();

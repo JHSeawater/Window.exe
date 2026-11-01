@@ -47,6 +47,9 @@ namespace WindowExe.BossFight
         private BossInteraction interaction;
         private BossDesktopSession session;
         private BossFightPresentation presentation;
+        private BossFightResult pendingSuccess;
+        private bool endingReturnRequested;
+        internal bool SuccessPresentationComplete=>presentation!=null && presentation.SuccessComplete;
         private TaskbarController taskbar;
         private CRTControlLease crt;
         private bool cleaning;
@@ -101,7 +104,7 @@ namespace WindowExe.BossFight
                 Model=phase2?(IBossFightModel)new BossPhase2Model(settings,input.CollectionTime):new BossPhase1Model(settings,settings.phase1,input.CollectionTime);
                 entering=!phase2 && settings.phase1IntroSprite!=null;entryStarted=Model.Clock.CombatTime;
                 input.Timeline.SetSuppressed(entering);
-                Model.Respawned+=OnRespawn; Model.Finished+=OnFinished;
+                Model.EyeContact+=OnEyeContact;Model.Respawned+=OnRespawn; Model.Finished+=OnFinished;
                 if(Model is BossPhase1Model first){first.Corrupted+=OnCorrupted;first.FirstDrop+=OnFirstDrop;}
                 session.Cancelled+=OnCancel; session.SpaceChanging+=OnSpaceChanging; session.Removed+=OnRemoved;
                 input.Timeline.Intent+=OnIntent;
@@ -112,6 +115,7 @@ namespace WindowExe.BossFight
                 crt?.SetLevel(phase2?2:0);
                 CacheTaskbarHit(); Present();
                 if(!Application.isFocused) boundaries.Add(new Boundary {time=input.CollectionTime,reason=BossPauseReason.FocusLost,active=true});
+                DesktopAmbience.SetBossFightActive(this,true);
                 return true;
             }
             catch(Exception e)
@@ -251,6 +255,7 @@ namespace WindowExe.BossFight
             input.Timeline.SetSuppressed(entering || Model.Clock.IsPaused || Model.CombatLocked);
             Model.ResolveBoundary();
         }
+        private void OnEyeContact()=>presentation?.PlayEyeContact(Model);
         private void OnRespawn() {interaction.Reset();input?.Timeline.ConsumeHeld();if(Model is BossPhase1Model)crt?.SetLevel(0);}
         private void OnCorrupted()
         {
@@ -261,16 +266,16 @@ namespace WindowExe.BossFight
             crt?.SetLevel(((BossPhase1Model)Model).Corruption);crt?.Spike();
         }
         private void OnFirstDrop()
-        {transitionStarted=Model.Clock.CombatTime;interaction.Reset();input.Timeline.SetSuppressed(true);presentation?.ShowTransition(true);}
+        {transitionStarted=Model.Clock.CombatTime;interaction.Reset();input.Timeline.SetSuppressed(true);presentation?.PlayPhase1Drop();presentation?.ShowTransition(true);}
         private void EnterSecondPhase()
         {
             var first=Model as BossPhase1Model;if(first==null)return;
             entering=false;
-            first.Corrupted-=OnCorrupted;first.FirstDrop-=OnFirstDrop;first.Respawned-=OnRespawn;first.Finished-=OnFinished;
+            first.Corrupted-=OnCorrupted;first.FirstDrop-=OnFirstDrop;first.EyeContact-=OnEyeContact;first.Respawned-=OnRespawn;first.Finished-=OnFinished;
             var time=Model.Clock.InputTime;var pauses=Model.Clock.PauseReasons;
             Model=new BossPhase2Model(settings,time){Invulnerable=first.Invulnerable};Model.Clock.SetPause(pauses,true,time);
             Model.Clock.SetDownloadDebugPause(first.Clock.DownloadDebugPaused,time);
-            Model.Respawned+=OnRespawn;Model.Finished+=OnFinished;transitionStarted=-1;
+            Model.EyeContact+=OnEyeContact;Model.Respawned+=OnRespawn;Model.Finished+=OnFinished;transitionStarted=-1;
             interaction.Reset();input.Timeline.ConsumeHeld();input.Timeline.SetSuppressed(Model.Clock.IsPaused);
             presentation?.ShowTransition(false);crt?.SetLevel(2);crt?.Spike(.35f);
         }
@@ -278,7 +283,9 @@ namespace WindowExe.BossFight
         {
             session.SetOutcome(outcome); interaction.Reset();input.Timeline.SetSuppressed(true);
             var result=new BossFightResult {SessionId=session.SessionId,Outcome=outcome,Body=Model.Body,Trash=Model.Trash,Boss=Model.Boss,DownloadPercent=Model.DownloadPercent};
-            if(outcome==BossOutcome.Success) RestoreCancelled?.Invoke(result); else BadEndingRequested?.Invoke(result);
+            if(outcome==BossOutcome.Success)
+            {pendingSuccess=result;presentation.BeginPhase2Success();}
+            else {presentation.BeginEndingVideo(outcome);BadEndingRequested?.Invoke(result);}
         }
         private void Present()
         {
@@ -290,12 +297,23 @@ namespace WindowExe.BossFight
                     session.Request(Model.Minimized?WindowAction.Minimize:WindowAction.Restore);
                 presentation?.Render(Model,taskbar,entering?EntryAge:-1);
             }
+            else presentation?.UpdateAudio(Model,entering);
+            if(pendingSuccess!=null && presentation.SuccessComplete)
+            {var result=pendingSuccess;pendingSuccess=null;presentation.BeginEndingVideo(result.Outcome);RestoreCancelled?.Invoke(result);}
+            if(IsActive && presentation.EndingFinished && !endingReturnRequested)
+            {
+                endingReturnRequested=true;
+                if(string.IsNullOrEmpty(settings.endingReturnScene) || !Application.CanStreamedLevelBeLoaded(settings.endingReturnScene))
+                {Debug.LogError("Ending return scene is unavailable: "+settings.endingReturnScene,this);return;}
+                string scene=settings.endingReturnScene,id=session.SessionId;
+                if(CompleteEnding(id))UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
+            }
         }
-        public bool AllowEnding(string sessionId,IEnumerable<string> contentIds) => IsActive && session.AllowEnding(sessionId,contentIds);
-        public CRTControlLease TransferCrtToEnding(string sessionId) => IsActive && session.SessionId==sessionId && Model.Outcome!=BossOutcome.None ? crt?.Transfer() : null;
+        public bool AllowEnding(string sessionId,IEnumerable<string> contentIds) => IsActive && pendingSuccess==null && !presentation.EndingBusy && session.AllowEnding(sessionId,contentIds);
+        public CRTControlLease TransferCrtToEnding(string sessionId) => IsActive && pendingSuccess==null && !presentation.EndingBusy && session.SessionId==sessionId && Model.Outcome!=BossOutcome.None ? crt?.Transfer() : null;
         public bool CompleteEnding(string sessionId)
         {
-            if(!IsActive || sessionId!=session.SessionId || Model.Outcome==BossOutcome.None) return false;
+            if(!IsActive || pendingSuccess!=null || presentation.EndingBusy || sessionId!=session.SessionId || Model.Outcome==BossOutcome.None) return false;
             Cleanup(BossCleanupCause.EndingFinished);return true;
         }
         private void OnRemoved(BossCleanupCause cause) => Cleanup(cause);
@@ -304,7 +322,7 @@ namespace WindowExe.BossFight
         {
             if(cleaning) return; cleaning=true;
             input?.Dispose();input=null;
-            if(Model!=null) {Model.Respawned-=OnRespawn;Model.Finished-=OnFinished;}
+            if(Model!=null) {Model.EyeContact-=OnEyeContact;Model.Respawned-=OnRespawn;Model.Finished-=OnFinished;}
             if(Model is BossPhase1Model first){first.Corrupted-=OnCorrupted;first.FirstDrop-=OnFirstDrop;}
             if(session!=null)
             {
@@ -312,6 +330,9 @@ namespace WindowExe.BossFight
                 session.Exit(cause,cause==BossCleanupCause.EndingFinished);
             }
             presentation?.Dispose();presentation=null;crt?.Release();crt=null;session=null;
+            pendingSuccess=null;
+            endingReturnRequested=false;
+            DesktopAmbience.SetBossFightActive(this,false);
             boundaries.Clear();intents.Clear();transitionStarted=-1;entering=false;cleaning=false;
         }
     }

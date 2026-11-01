@@ -823,6 +823,12 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
   - `WINDOW.exe/Start Screen/Setup Start Screen in Current Scene`: 현재 씬에 1920×1080 기준 캔버스, 배경, 모니터 글리치 영역, 타이틀, 깜빡이는 텍스트 계층 구조를 생성하고 컴포넌트를 자동 연결.
   - `WINDOW.exe/Start Screen/Create New Start Screen Scene`: 신규 `StartScreen.unity` 씬을 생성하고 저장.
 
+**일반 플레이 팬 배경음 — 2026-11-01:** `DesktopAmbience`가 `StartScene` 또는 `Desktop`을 직접 시작할 때 `Assets/Prefabs/Desktop/Resources/DesktopAmbience.prefab`을 한 번 로드한다. `DontDestroyOnLoad`의 단일 2D AudioSource를 유지하므로 인트로·씬 전환·창 조작으로 재시작하지 않는다. 프리팹의 `fanLoop`는 제공 MP3, `volume`은 0.7이며 AudioSource.loop와 DecompressOnLoad·preloadAudioData를 사용한다. 오디오 컴포넌트 초기화 후 Start에서 재생한다. 기존 시작 화면 BGM은 이 제공자가 있을 때 중복 재생하지 않는다. `BossFightController`는 진입 성공 때 `SetBossFightActive(this, true)`, 세션 정리 때 false를 전달한다. 해당 소스만 음소거하고 재생 시계는 유지하며 효과음·다른 AudioSource·AudioListener에는 영향을 주지 않는다. 실패한 진입은 음소거를 남기지 않고, 결과 대기 중에는 보스전 소유를 유지한다. 동작 확인 상태는 [체크리스트 44장](IMPLEMENTATION_CHECKLIST.md#44-일반-플레이-팬-배경음--2026-11-01)을 따른다.
+
+**전역 마우스 클릭음 — 2026-11-01:** `GlobalClickAudio`가 모든 실행 씬의 최초 진입 때 `Assets/Prefabs/Desktop/Resources/GlobalClickAudio.prefab`을 로드하고 단일 `DontDestroyOnLoad` 소스를 유지한다. `InputSystem.onEvent`의 Dynamic State/DeltaState에서 각 Mouse의 왼쪽·오른쪽·가운데·뒤로·앞으로 버튼의 이벤트 값과 적용 전 상태를 비교한다. 누름에는 `pressClip`의 `클.mp3`, 해제에는 `releaseClip`의 `릭.mp3`를 `PlayOneShot`으로 한 번씩 재생한다. UI 이벤트와 별개로 관찰하고 입력을 소비하지 않으므로 빈 화면·모달·보스전에서도 동작하며, 같은 갱신의 여러 누름/해제는 각각 재생하고 유지/이동은 재생하지 않는다. 비활성/파괴 때 구독을 해제한다. 클릭 소스는 팬 배경음과 별개인 2D 소스(기본 음량 0.7)여서 보스전의 팬 음소거에 영향받지 않는다. 분리 음원의 진폭이 작은 문제는 프리팹의 pressGain=17·releaseGain=43을 PlayOneShot의 volumeScale로 전달하여 보정한다. 원본 MP3는 수정하지 않으며 기존 클릭음의 가장 큰 10ms RMS에 두 음원을 맞춘 값이다. 두 MP3는 DecompressOnLoad·preloadAudioData를 사용한다. 확인 상태는 [체크리스트 45장](IMPLEMENTATION_CHECKLIST.md#45-게임-전체-마우스-클릭음--2026-11-01)을 따른다.
+
+**시작 부팅음 — 2026-11-01:** `StartScreenController.TriggerStart`가 다음 씬 검증을 통과하고 전환 잠금을 설정한 직후 `DesktopAmbience.PlayBootSound()`를 호출한다. 중복 시작 요청은 기존 잠금에서 거부한다. DesktopAmbience 프리팹의 `bootClip`에 `부팅음2.mp3`, `bootVolume`에 1, `bootFadeSeconds`에 1을 연결한다. 요청 시 팬과 별도인 2D AudioSource를 만들어 loop=false로 Play하며, Update에서 실제 timeSamples로 계산한 마지막 1초의 음량만 SmoothStep으로 0까지 줄인다. 다음 정상 시작 요청에는 기본 음량을 다시 적용한다. 같은 영속 오브젝트에 두 소스를 두므로 팬 반복 위치/음량을 바꾸지 않고 인트로·Desktop 전환 뒤에도 부팅음을 유지한다. 부팅음은 사전 로드하며 영상 누락에 의한 즉시 Desktop 진입 경로에도 같은 재생을 적용한다. 확인 상태는 [체크리스트 46장](IMPLEMENTATION_CHECKLIST.md#46-시작-화면-부팅음--2026-11-01)을 따른다.
+
 ### 15-2. 낡은 모니터 둥근 영역 노이즈 셰이더
 - `Assets/Shaders/Desktop/CRTMonitorNoise.shader`:
   - 모니터 모양의 둥근 모서리 마스킹: SDF Rounded Box 거리 공식을 적용해 별도의 텍스처 마스크 없이도 모서리가 둥근 화면 형태로 자름 (`_CornerRadius`, `_EdgeSoftness`).
@@ -897,6 +903,8 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 
 ## 17. 보스전 구현 계획 [제안]
 
+> **2026-11-01 현재 계약:** 아래 초기 제안의 직접 휴지통 비우기 UI/외부 엔딩 대기는 최신 사용자 지시의 결과별 영상 자동 재생·StartScene 복귀로 대체한다. 현재 기술 연결은 17-10장의 결과별 엔딩 영상 문단, 검증 상태는 체크리스트 53장을 따른다.
+
 ### 17-1. 계획의 상태와 담당 경계
 
 2026-10-31 사용자 답변을 반영한 구현 계획이며, 이후 사용자의 **“작업 계획대로 보스전 구현을 시작하라”** 명령으로 구현·검증에 착수했다. 아래 타입·API·파일명은 구현 결과로 명시한 부분 외에는 제안이며 완료 여부는 체크리스트 18장에서 관리한다. 기반은 Unity 6000.6.7f1, URP 2D, Input System, 기존 WindowManager/입력 라우터/작업 표시줄/공통 글꼴/CRT다.
@@ -908,7 +916,7 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 | 경계 | 계획하는 요청·인계 | 지켜야 할 조건 |
 |---|---|---|
 | 직전 연출 → 보스전 | `BeginBossFight(context)` 형태의 진입 요청 | 눈알 연출과 다운로드 대화 상자 종료 시점에 한 번 수신. 요청 식별자와 기본 1페이즈/개발용 2페이즈 진입을 구분하고 준비 성공 후에만 세션 시작 |
-| 보스전 → 성공 엔딩 | `RestoreCancelled(context)` 형태의 완료 알림 | 보스 드롭 성공 상태와 전투/시간 중단을 먼저 확정한 뒤 한 번 알림. 같은 세션의 휴지통·보스 상태를 인계하며 직접 비우기 자체를 실행하지 않음 |
+| 보스전 → 성공 엔딩 | `RestoreCancelled(context)` 형태의 완료 알림 | 보스 드롭 성공 상태와 전투/시간 중단을 먼저 확정하고, 성공 효과음 종료·암전 후 한 번 알림. 같은 세션의 휴지통·보스 상태를 인계하며 직접 비우기 자체를 실행하지 않음 |
 | 보스전 → 별도 배드 엔딩 | `BadEndingRequested(context, DownloadCompleted)` 형태의 종료 알림 | 다운로드 100%에서 전투·입력·리스폰을 중단하고 한 번 인계. 피격 재도전이나 성공 알림으로 대체하지 않음 |
 | 엔딩/수명 종료 → 보스전 정리 | `ExitBossFight(sessionId, cleanupCause)` 형태의 정리 요청 | 전투 결과와 정리 원인을 분리한다. 엔딩 완료 정리는 확정 결과·자원 사용 종료를 확인하고, 씬 종료/외부 제거는 결과와 무관하게 소유 자원을 해제. 이전 세션 요청은 현재 세션에 적용하지 않음 |
 | 창 담당 ↔ 보스전 | 창별 geometry 제약·본문 입력·작은 제목 표시줄 정책 | 기존 이동·8방향 리사이즈·취소·관리자 알림을 재사용. 일반 창의 동작·정렬을 바꾸지 않음 |
@@ -1046,7 +1054,7 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 - 포획 중에는 새 공격과 예고만 멈춘다. 기존 눈·다운로드는 진행하며 포획 해제나 최소화 뒤 일반 공격을 재개한다. 벽 정지와 포획 정지를 별도 사유로 보관하고 모든 사유가 해제될 때만 각 공격의 남은 시간부터 재개한다. 거리 조건의 보스 직접 사격에도 같은 정지를 적용한다. 앱 비활성 정지는 기존 눈 이동까지 포함하는 별도 상위 조건이다.
 - 만료·X·최소화/복원·피격·드롭 후보는 콜백에서 즉시 상태를 바꾸지 않고 공통 시간축의 판정 경로에 모은다. 2페이즈의 같은 시각에는 BOSS_FIGHT 3-5의 **만료 → 위험한 X → 유효한 최소화 → 눈 피격 → 성공 드롭** 순서를 적용한다. 사용자가 선택한 최소화 우선은 표시 중인 창의 최소화에만 적용하고, 이미 최소화된 창의 복원은 즉시 도착 겹침을 검사한다. 최소화가 성립하면 같은 조작의 드롭 후보도 취소한다. 시간 경계를 넘는 구간은 경계에서 나눠 마감 전 성공을 구분하고 먼저 확정된 성공/배드 엔딩은 뒤집지 않는다. 만료와 피격이 겹치면 전투 복구 없이 배드 엔딩만 한 번 확정한다.
 - 배드 엔딩 확정 시 다운로드를 100%로 고정하고 공격·조작·리스폰·현재 페이즈 재시작을 막은 뒤 `BadEndingRequested(DownloadCompleted)`를 한 번 전달한다. 장면/문구/연출은 다른 담당이 구현하며, 연결 전에도 종료 상태에서 기다릴 뿐 자동 리스폰하지 않는다.
-- 성공도 전투·다운로드·피격/X 판정을 중단하고 전투 입력을 잠근 뒤 `RestoreCancelled`를 한 번 알린다. 엔딩 입력 허용과 자원 인계는 17-2장을 따르며 남은 눈의 최종 삭제 표현은 엔딩 담당의 직접 비우기와 맞춘다.
+- 성공도 전투·다운로드·피격/X 판정을 중단하고 전투 입력을 잠근 뒤, 성공 효과음 종료·암전을 기다려 `RestoreCancelled`를 한 번 알린다. 엔딩 입력 허용과 자원 인계는 17-2장을 따르며 남은 눈의 최종 삭제 표현은 엔딩 담당의 직접 비우기와 맞춘다.
 - 새 Play 세션에서는 전투/다운로드 세션·정지 사유·확정 결과·구독·static 참조를 초기화한다. Domain/Scene Reload를 모두 생략해도 명시적으로 재등록하고, 살아 있는 컴포넌트를 다시 사용하더라도 이전 Play의 전투 상태를 이어받지 않는다. 씬 종료·외부 제거는 멱등한 정리 경로로 구독·숨은 층 RenderTexture/소유 재질·입력 제한을 해제하며 성공/배드 엔딩을 임의로 발생시키지 않는다.
 
 ### 17-6. 표시·숨은 층·작업 표시줄
@@ -1225,7 +1233,7 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 
 **입력 병합 보정:** 설치된 Input System 1.20.1의 `FastMouse.MergeForward`는 `onEvent`보다 먼저 같은 버튼 상태의 연속 표본을 합친다. 빠른 누름+이동이 합쳐져 시작 위치를 잃는 재현을 확인했다. `BossInputCollectionLease`는 수집기 수명 동안 `disableRedundantEventsMerging=true`를 참조 계수로 유지하고 마지막 수집기 종료 때 원래 값으로 복구한다. 갱신 모드·포커스 정책·기기 바인딩은 바꾸지 않고 이벤트를 handled 처리하지 않는다. 기존 Windows 입력 프로브 결과는 이 보정 전 조건의 기록이다. 보정 후 전체 경로/조작의 합성 원본 표본 시험을 통과했으며, 새 전투 빌드의 수동 입력은 별도로 확인한다. 합성 입력 시험은 외부 에디터 포커스 간섭을 분리하고 관측 포커스 경계를 명시적으로 주입한다. 제품 실행에서는 Unity의 실제 포커스/일시 중단 알림을 사용한다.
 
-앞 연출 담당은 `BeginBossFight(new BossFightEntryContext { RequestId=..., CrtControl=... }, out error)`를 호출한다. 중복 요청 ID·활성 세션·낡은 CRT 토큰은 거부한다. 직접 2페이즈 개발 진입은 `StartAtPhase2`/ `BeginPhase2`로 구분한다. 성공/배드 엔딩 담당은 결과의 `SessionId`로 `AllowEnding`과 `TransferCrtToEnding`을 호출하고 실제 휴지통 비우기 또는 배드 엔딩 연출을 진행한 뒤 `CompleteEnding`을 알린다. 검증 씬에서는 외부 엔딩 장면이 붙지 않았으므로 결과 확정 뒤 전투를 멈춘 채 기다린다.
+앞 연출 담당은 `BeginBossFight(new BossFightEntryContext { RequestId=..., CrtControl=... }, out error)`를 호출한다. 중복 요청 ID·활성 세션·낡은 CRT 토큰은 거부한다. 직접 2페이즈 개발 진입은 `StartAtPhase2`/ `BeginPhase2`로 구분한다. 현재 성공/배드 엔딩은 아래 결과별 영상 경로를 자동 실행하고, 재생 중에는 외부 종료/입력 권한 인계를 막는다. 영상 종료 뒤 `CompleteEnding`으로 세션을 정리하고 StartScene으로 복귀한다. 외부 종료 어댑터의 세션 ID 검증은 유지한다.
 
 검증 씬에만 붙인 `BossValidationDiagnostics`는 실행 파일 옆 `boss-session.json`에 페이즈·시도·다운로드·입력 횟수/지연·최소화/정지 상태를 저장한다. 일반 문자 입력이나 관련 없는 키는 기록하지 않는다. Editor에서는 `Builds/BossFight/boss-session.json`을 사용한다.
 
@@ -1234,6 +1242,18 @@ GPU 측정 지원은 그래픽 API·설정에 따라 다르므로 [Unity GPU Pro
 작은 보스 창의 위쪽 9 기준 px는 연속 리사이즈 영역으로 확보한다. `WindowTitleBar.ConfigureCompact`의 선택적 `topResizeInset`과 보스전 `ButtonAt`을 같은 값으로 맞추고 버튼 표시·판정은 그 아래로 배치한다. 일반 창과 inset을 지정하지 않은 기존 호출은 기본값 0을 사용한다.
 
 사용자 조작 피드백에 따라 두 페이즈의 리사이즈 시작 영역을 테두리 안쪽 9·바깥쪽 24 기준 px로 적용한다(기존 바깥쪽 9). `BossFightSettings.resizeBorder`는 안쪽, `resizeOuterBorder`는 바깥쪽 여유다. `BossInteraction`의 8방향 판정과 `BossFightWindow.ConfigureResizePadding`의 핸들 콜라이더를 같은 값으로 맞춘다. `WindowResizeHandle.ConfigureSize`의 선택적 `extraOutside`는 콜라이더 중심을 바깥으로 절반 이동하고 크기를 늘려 안쪽 경계를 보존하며, 지정하지 않은 일반 창은 0이다. 좌표 공간을 다시 바인딩해도 현재 설정을 유지한다. 확대 영역은 잡기 판정만 바꾸며 제목/버튼 우선순위·본문 드래그·실제 geometry·눈 판정에는 포함하지 않는다.
+
+**보스전 진입 효과음 — 2026-11-01:** `BossFightSettings`의 `entryDownloadSound`·`entryEyeSound`·`entryErrorSound`에 제공 `삑.mp3`·`띵에러.mp3`·`에러(띵).mp3`를 연결한다. `BossFightBuilder.CreateFullValidation`도 같은 참조를 생성한다. `BossFightPresentation`의 세션 소유 root에 별도 2D AudioSource(기본 음량 0.7)를 두고 Downloading 생성, 각 눈 창의 첫 활성, 각 Error 변환, One_more 첫 활성에서 PlayOneShot으로 재생한다. 세션별 1회 플래그를 사용해 같은 Render의 반복·정지/복귀 때 중복하지 않으며 연속 효과음은 중첩한다. 모델 시계 정지에는 이 소스만 Pause/UnPause하고 Dispose에는 Stop/파기한다. 일반 클릭음·팬·부팅 소스는 제어하지 않는다. 원본 MP3를 보존하고 세 음원을 사전 로드한다. 삑 원본의 peak가 약 0.02484로 작아 entryDownloadGain=8을 별도 적용한다. Error/One_more에는 entryErrorGain=0.3을 적용해 연속 중첩 시 과도한 출력을 줄인다. 확인 상태는 [체크리스트 47장](IMPLEMENTATION_CHECKLIST.md#47-보스전-진입-창-효과음--2026-11-01)을 따른다.
+
+**보스전 페이즈 BGM — 2026-11-01:** `BossFightSettings.phase1Music`·`phase2Music`에 제공 음원을 연결하고 `musicVolume` 기본값 0.7을 사용한다. 2페이즈/전체 검증 씬 생성 도구도 같은 참조를 연결한다. `BossFightPresentation`은 진입 효과음과 별개인 세션 소유 2D AudioSource를 loop=true로 유지하고 `UpdateAudio`에서 진입 연출 여부·모델 페이즈·결과를 보고 곡이 바뀔 때만 Stop/Play한다. 재시도·최소화에는 같은 소스를 유지하며 모델 정지에는 두 세션 소스를 Pause/UnPause한다. 좌표 공간 무효로 시각 Render를 건너뛸 때에도 Controller.Present가 오디오 상태를 갱신한다. 결과 확정 때 BGM을 멈추고 Dispose 때 소스를 Stop/파기한다. 원본 MP3는 보존하고 사전 로드한다. 확인 상태는 [체크리스트 48장](IMPLEMENTATION_CHECKLIST.md#48-보스전-페이즈-배경음--2026-11-01)을 따른다.
+
+**보스전 눈 접촉음 — 2026-11-01:** `BossFightSettings.phase1EyeContactSound`·`phase2EyeContactSound`와 검증 씬 생성 도구에 제공 `삐.mp3`·`깨진삐.mp3`를 연결한다. `IBossFightModel.EyeContact`를 Controller가 구독하여 Presentation의 기존 효과음 소스에서 PlayOneShot으로 재생한다(음량 0.7). 1페이즈는 합쳐진 연속 접촉 구간의 진입만 알리며 완전 이탈·최소화·리스폰 때 접촉 상태를 해제한다. 한 입력 구간 안에서 눈을 통과하는 경우도 처리한다. 2페이즈는 연속 충돌·경계 판정·강제 복원의 실제 눈 피격 경로만 알리며 X/수동 Respawn과 구분한다. 페이즈 교체·세션 정리 때 이전 모델 구독을 해제하고 기존 모델 정지/복귀와 세션 파기 정책을 따른다. 원본 파일·GUID는 보존하고 두 음원을 사전 로드한다. 확인 상태는 체크리스트 50장에서 관리한다.
+
+**보스전 페이즈 전환 효과음 — 2026-11-01:** `phase1DropSound`에 `노이즈(깜놀).mp3`를 연결하고 검증 씬 생성 도구·사전 로드를 맞춘다. Controller.OnFirstDrop에서 Presentation.PlayPhase1Drop을 한 번 호출하며 세션별 재생 플래그를 둔다. RenderTransitionDosWindows는 실제 활성 시각에 창별 플래그를 확인하고 기존 `entryErrorSound`와 전환 전용 `transitionDosGain`(0.15)을 사용한다. 노이즈는 `phase1DropGain`(0.8)을 적용하여 두 소리가 겹칠 때 과도한 출력을 줄인다. 기존 효과음 소스의 PlayOneShot을 공유해 겹쳐 재생하고 BGM은 건드리지 않는다. 모델 정지/복귀·Dispose 정책도 공유한다. 확인 상태는 체크리스트 51장에서 관리한다.
+
+**2페이즈 성공 정지·암전 — 2026-11-01:** 드롭 성공은 모델의 기존 Success/Clock.Stop으로 즉시 확정한다. Controller는 결과를 `pendingSuccess`로 보관하고 Presentation.BeginPhase2Success를 한 번 호출한다. 이때 BGM·기존 효과음을 멈추고 전용 2D 소스의 `phase2SuccessSound`(깨진삐)를 재생한다. 기존 효과음 소스에서는 DSP 경과 시간 기준 0.08초 간격으로 에러음 8회를 겹친다. 소스 음량은 기존 0.7에 성공 gain 0.8, 에러 gain 0.08을 적용한다. 성공 중 전투 Render를 건너뛰어 마지막 표시를 유지하고, 정지된 전투 시계 대신 오디오 DSP 경과 시간을 사용하되 포커스/앱/공간 정지에는 세 소스를 함께 Pause/UnPause한다. 원본 클립 길이 이상 경과하고 실제 성공 소스 재생이 끝난 뒤 ScreenSpaceOverlay의 검은 Image를 화면 전체에 표시·유지한다. 암전 이후에만 RestoreCancelled를 한 번 알리고 AllowEnding/TransferCrtToEnding/CompleteEnding을 허용한다. 클립이 없는 격리 설정은 첫 갱신에서 암전·인계하며 세션 정리는 소스와 검은 Canvas도 함께 파기한다. Time.timeScale은 변경하지 않는다. 설정·검증 씬 생성 도구의 참조와 확인 상태는 체크리스트 52장에서 관리한다.
+
+**결과별 엔딩 영상 — 2026-11-01:** `normalEndingVideo`·`badEndingVideo`에 제공 MP4의 VideoClip을 연결하며 생성 도구도 같은 참조를 설정한다. 성공은 효과음 종료·암전 후, 배드는 결과 확정 직후 Presentation.BeginEndingVideo가 세션 소유 `BossEndingVideo`를 한 번 만든다. 기존 검은 Canvas 위 RawImage·FitInParent로 원래 비율을 유지하고 VideoPlayer/RenderTexture로 표시한다. 첫 영상 프레임 전에는 검은 배경을 유지하며, 영상의 첫 오디오 트랙을 별도 2D AudioSource(음량 0.9)로 출력한다. VideoPlayer는 1회 재생하며 자연 종료 시 CompleteEnding으로 세션을 정리한 뒤 endingReturnScene(StartScene)을 불러온다. 팬 배경음과 시작 입력도 새 시작 화면에서 이어진다. 모델 정지/복귀에는 준비/재생을 함께 멈추고, 준비 실패/15초 제한에서는 검은 화면을 유지하며 오류를 기록한다. 재생 중에는 AllowEnding/TransferCrtToEnding/CompleteEnding을 거부하여 영상이 잘리지 않게 한다. 세션 정리 때 콜백·소스·RenderTexture·화면을 해제한다. 제공 MP4는 Unity가 지원하지 않는 High 4:4:4 프로필이어서 원본/메타 백업 뒤 High 4:2:0(CRF 16)으로 변환했고 AAC 오디오는 그대로 복사했다. 해상도·프레임·재생 길이·기존 GUID를 유지한다. 원본 백업과 실제 검증은 체크리스트 53장에서 관리한다. 별도 휴지통 비우기 UI를 기다리던 앞선 종료 계약은 이번 자동 영상·시작 화면 복귀 경로로 대체한다.
 
 ## 18. 간헐적인 마우스 끊김 구현 계획 [제외]
 
@@ -1381,7 +1401,11 @@ Desktop 씬에서 `photos` 아이콘 오브젝트와 DesktopController 등록을
 
 main은 `80299e0`까지 반영하고 기존 미커밋 보스전·데스크톱 작업을 복원했다. `Window`의 양쪽 테두리 파괴 API와 로컬 GeometryConstraint, `InternetWindow.PointerLeftPressed(Vector2)` 입력 연결을 함께 유지한다. Desktop 씬의 `repair` 등록과 FolderWindow/RepairWindow/ExtractedKeyEntity도 원격 구현을 따른다. 이미지·이벤트 미할당과 검증 범위는 체크리스트 30·31장을 따른다. 이번 글꼴 충돌은 원본 폰트/동적 설정이 같음을 확인하고 로컬 glyph·atlas 캐시 전체를 유지했다. 복구용 stash와 디스크 사본을 보관하며 원래 미스테이징 상태를 유지한다.
 
-**현재 병합 기준은 `cdc5fbd`다.** 위 문단은 이전 병합 기록이며, 현재는 22장의 퀘스트와 19장의 인터넷 암호 잠금, 20장의 `lock-warning`/보스전 연결을 함께 유지한다. 원격 글꼴 에셋은 충돌 없이 전체를 반영했다. 인터넷의 직접 키보드/마우스 입력도 `DesktopInputRouter.IsWorldInputBlocked`를 확인하고, 검색 캡처 시험은 실제 비밀번호 입력 API로 먼저 해제한다. 문서의 중복 체크리스트 번호는 로컬 기존 번호를 유지하고 원격 내용을 40·41장으로 옮겼다. 백업·검증 상태는 체크리스트 42장에서 관리한다.
+**현재 병합 기준은 `0d605fe`다.** 2026-11-01 추가 병합으로 총 이미지의 사용자 피벗(0.5017, 0.6452755), 인터넷 창 기본 높이 7과 암호/사격 기본값 직렬화, macOS 빌드 프로필을 반영했다. 원격 UnityConnect의 활성 설정도 그대로 가져왔다. macOS 프로필은 전역 StartScene → Desktop 씬 목록을 사용하며 현재 Windows 활성 타깃은 바꾸지 않는다. 현재 에디터에는 macOS 빌드 지원이 없어 내부 Mac 플랫폼 설정과 실제 빌드는 지원 모듈이 있는 환경에서 확인해야 한다. 기존 미커밋 사운드/엔딩 작업은 유지하며 최신 백업·검증 상태는 체크리스트 54장에서 관리한다.
+
+이전 `d1c34b1` 병합의 메모 앞면 이미지·HELP ME·정렬, 엿보기 프리팹·사진 임포트, 열쇠 메뉴 한글, 초기 Wi-Fi 비연결 상태도 유지한다. 당시 백업·검증은 체크리스트 49장에서 관리한다.
+
+앞선 `cdc5fbd` 병합에서는 22장의 퀘스트와 19장의 인터넷 암호 잠금, 20장의 `lock-warning`/보스전 연결을 함께 유지했다. 원격 글꼴 에셋은 충돌 없이 전체를 반영했다. 인터넷의 직접 키보드/마우스 입력도 `DesktopInputRouter.IsWorldInputBlocked`를 확인하고, 검색 캡처 시험은 실제 비밀번호 입력 API로 먼저 해제한다. 문서의 중복 체크리스트 번호는 로컬 기존 번호를 유지하고 원격 내용을 40·41장으로 옮겼다. 당시 백업·검증 상태는 체크리스트 42장에서 관리한다.
 
 `InternetWindow.PointerLeftPressed(Vector2)`의 좌표는 화면 픽셀이다. `GetKeypadButtonWorldRect`가 돌려주는 월드 좌표를 전달할 때에는 카메라의 `WorldToScreenPoint`로 변환한다. 키패드 회귀 시험도 하노이 입력 시험과 같은 좌표 계약을 사용한다.
 

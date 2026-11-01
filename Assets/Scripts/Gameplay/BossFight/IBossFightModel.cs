@@ -19,6 +19,7 @@ namespace WindowExe.BossFight
         double HiddenRemaining {get;}
         double DownloadPercent {get;}
         event Action Respawned;
+        event Action EyeContact;
         event Action<BossOutcome> Finished;
         void Advance(double inputTime);
         void Advance(double inputTime,BossRect body,BossPoint trash);

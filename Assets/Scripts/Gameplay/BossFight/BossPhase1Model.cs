@@ -8,7 +8,7 @@ namespace WindowExe.BossFight
         private readonly BossFightSettings settings;
         private readonly List<BossEye> eyes=new List<BossEye>();
         private double hiddenUntil,downloadElapsed,downloadAtDrop,dropTime;
-        private bool scored,pendingCorruption,pendingRestore;
+        private bool scored,pendingCorruption,pendingRestore,touchingEye;
         private double frozenGrabAt=double.NegativeInfinity;
         public BossPhaseDefinition Definition {get;}
         public BossEyeSilhouette EyeShape {get;}
@@ -33,20 +33,21 @@ namespace WindowExe.BossFight
         public double FrozenGrabAge=>Clock.CombatTime-frozenGrabAt;
         public void NotifyFrozenGrab()=>frozenGrabAt=Clock.CombatTime;
         public event Action Respawned,Corrupted,FirstDrop;
+        public event Action EyeContact;
         public event Action<BossOutcome> Finished {add{} remove{}}
         public BossPhase1Model(BossFightSettings settings,BossPhaseDefinition definition,double inputTime)
         {this.settings=settings;Definition=definition??throw new ArgumentNullException(nameof(definition));EyeShape=new BossEyeSilhouette(settings.phase1EyeSprite);Clock=new BossFightClock(inputTime);Reset();}
         private void Reset()
         {
             Attempt++;Body=Definition.initialWindow;Trash=Definition.initialTrash;Boss=Definition.boss;
-            Corruption=0;Exposure=0;scored=pendingCorruption=pendingRestore=Minimized=CombatLocked=false;
+            Corruption=0;Exposure=0;scored=pendingCorruption=pendingRestore=Minimized=CombatLocked=touchingEye=false;
             frozenGrabAt=double.NegativeInfinity;
             downloadElapsed=0;eyes.Clear();int id=0;
             foreach(var eye in Definition.ActiveEyes)eyes.Add(new BossEye{Id=++id,Kind=BossEyeKind.Starting,Position=eye.center,Radius=eye.radius});
         }
         private bool Overlapping(double margin)
         {foreach(var eye in eyes)if(EyeShape.Overlaps(Body,eye.Position,eye.Radius,margin))return true;return false;}
-        private void ClearExposure(){Exposure=0;scored=pendingCorruption=false;}
+        private void ClearExposure(){Exposure=0;scored=pendingCorruption=touchingEye=false;}
         private void AdvanceClock(double time)
         {double elapsed=Clock.Advance(time);if(!Clock.DownloadDebugPaused && !CombatLocked)downloadElapsed+=elapsed;}
         private bool AddCorruption()
@@ -79,6 +80,7 @@ namespace WindowExe.BossFight
             foreach(var interval in intervals)
             {
                 if(interval.Start>previousEnd)ClearExposure();
+                if(!touchingEye){touchingEye=true;if(!Invulnerable)EyeContact?.Invoke();}
                 double duration=(interval.End-interval.Start)*seconds;
                 if(!scored && Exposure+duration>=Definition.exposureSeconds)
                 {

@@ -9,6 +9,18 @@ namespace WindowExe.BossFight.Tests
         private BossFightSettings settings;
         [SetUp] public void SetUp() => settings=ScriptableObject.CreateInstance<BossFightSettings>();
         [TearDown] public void TearDown() => Object.DestroyImmediate(settings);
+        [Test] public void EyeContactOnlyReportsConfirmedCollisionAfterBoundaryPriority()
+        {
+            var model=new BossPhase2Model(settings,0);int contacts=0;model.EyeContact+=()=>contacts++;
+            model.ClearEyes();model.AddEye(BossEyeKind.Floating,model.Body.Center,default,10);
+            model.AddEye(BossEyeKind.Floating,model.Body.Center,default,10);
+            model.ResolveBoundary(toggle:true);Assert.That(contacts,Is.Zero);
+            model.ResolveBoundary(toggle:true);Assert.That(contacts,Is.EqualTo(1));
+            model.ResolveBoundary(dangerousClose:true);model.Respawn();Assert.That(contacts,Is.EqualTo(1));
+            model.ClearEyes();model.AddEye(BossEyeKind.Floating,model.Body.Center,default,10);
+            model.Clock.Advance(settings.downloadSeconds+1);model.ResolveBoundary();
+            Assert.That(contacts,Is.EqualTo(1));Assert.That(model.Outcome,Is.EqualTo(BossOutcome.BadEnding));
+        }
         [Test] public void FirstSevenEyesHaveSafeSpacingAndNoImmediateDeath()
         {
             var model=new BossPhase2Model(settings,0);

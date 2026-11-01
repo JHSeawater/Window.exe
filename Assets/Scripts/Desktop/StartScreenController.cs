@@ -245,7 +245,7 @@ namespace WindowExe.Desktop
         private void Start()
         {
             // 시작 화면 배경음악 재생
-            if (bgmAudioSource != null &&
+            if (!DesktopAmbience.IsAvailable && bgmAudioSource != null &&
                 startBgm != null)
             {
                 bgmAudioSource.Play();
@@ -540,6 +540,7 @@ namespace WindowExe.Desktop
 
             isTransitioning = true;
             videoFailed = false;
+            DesktopAmbience.PlayBootSound();
 
             // 기존 이벤트 유지
             OnStartTriggered?.Invoke();
@@ -746,7 +747,7 @@ namespace WindowExe.Desktop
             }
 
             if (
-                bgmAudioSource != null &&
+                !DesktopAmbience.IsAvailable && bgmAudioSource != null &&
                 startBgm != null
             )
             {

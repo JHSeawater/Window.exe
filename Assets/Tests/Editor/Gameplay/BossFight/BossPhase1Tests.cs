@@ -10,6 +10,26 @@ namespace WindowExe.BossFight.Tests
         [SetUp] public void SetUp(){settings=ScriptableObject.CreateInstance<BossFightSettings>();definition=ScriptableObject.CreateInstance<BossPhaseDefinition>();settings.phase1EyeSprite=UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Screen/눈깔풀.png");}
         [TearDown] public void TearDown(){Object.DestroyImmediate(settings);Object.DestroyImmediate(definition);}
         private BossPhase1Model Model()=>new BossPhase1Model(settings,definition,0);
+        [Test] public void EyeContactStartsBeforeCorruptionAndDoesNotRepeatUntilCompleteExit()
+        {
+            definition.eyes=new[]{new BossStaticEye(600,700,50),new BossStaticEye(600,700,50)};
+            var model=Model();int contacts=0;model.EyeContact+=()=>contacts++;
+            var exposed=new BossRect(550,600,100,240);
+            model.Teleport(exposed,model.Trash);model.Advance(.01);model.ResolveBoundary();
+            Assert.That(contacts,Is.EqualTo(1));Assert.That(model.Corruption,Is.Zero);
+            model.Advance(2);model.ResolveBoundary();Assert.That(contacts,Is.EqualTo(1));
+            model.Teleport(definition.initialWindow,definition.initialTrash);model.Teleport(exposed,model.Trash);
+            model.Advance(2.01);model.ResolveBoundary();Assert.That(contacts,Is.EqualTo(2));
+            model.Respawn();Assert.That(contacts,Is.EqualTo(2));
+        }
+        [Test] public void EyeContactIncludesTwoSeparateCrossingsWithinOneInputSegment()
+        {
+            definition.initialWindow=new BossRect(0,300,100,240);definition.initialTrash=new BossPoint(50,420);
+            definition.eyes=new[]{new BossStaticEye(220,420,10),new BossStaticEye(420,420,10)};
+            var model=Model();int contacts=0;model.EyeContact+=()=>contacts++;
+            model.Advance(.2,new BossRect(600,300,100,240),model.Trash);model.ResolveBoundary();
+            Assert.That(contacts,Is.EqualTo(2));Assert.That(model.Exposed,Is.False);Assert.That(model.Corruption,Is.Zero);
+        }
         [Test] public void AuthoredRouteRunsWithoutExposureAndEndsWithFirstDropOnly()
         {
             var model=Model();int dropped=0;model.FirstDrop+=()=>dropped++;

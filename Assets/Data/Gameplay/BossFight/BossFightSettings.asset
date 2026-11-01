@@ -97,6 +97,26 @@ MonoBehaviour:
   phase1ErrorSprite: {fileID: -3139875151309784696, guid: d9a05737f6581d34fae05e1bffa63693, type: 3}
   phase1IntroSprite: {fileID: -9206548735825025157, guid: 8cc23ff6c5467464c9440e58ff4c801f, type: 3}
   phase1DownloadSprite: {fileID: 1523266362149686622, guid: 4dd786ece272fdc49bce679a650bbdab, type: 3}
+  entryDownloadSound: {fileID: 8300000, guid: 7507e6bcb276440cc8bb9e556085bbac, type: 3}
+  normalEndingVideo: {fileID: 32900000, guid: 17a69e7471cf3ca49a88a2dcbb2f1348, type: 3}
+  badEndingVideo: {fileID: 32900000, guid: 2583220784d4eab42866132d8dfe52da, type: 3}
+  endingReturnScene: StartScene
+  phase2SuccessSound: {fileID: 8300000, guid: 87ba6c9b4f730ac47a8b06c1d93e814a, type: 3}
+  phase2SuccessGain: 0.8
+  phase2SuccessErrorGain: 0.08
+  phase1DropSound: {fileID: 8300000, guid: 5d5dfd197ec364229bb946ecada46464, type: 3}
+  phase1DropGain: 0.8
+  transitionDosGain: 0.15
+  phase1EyeContactSound: {fileID: 8300000, guid: cdc81216c6e628f458cac5bb33fe4003, type: 3}
+  phase2EyeContactSound: {fileID: 8300000, guid: 87ba6c9b4f730ac47a8b06c1d93e814a, type: 3}
+  phase1Music: {fileID: 8300000, guid: 49b22deff1ac5b341ad7b5a189e3ed38, type: 3}
+  phase2Music: {fileID: 8300000, guid: e907d0dd8e4ee324fba5255950faa076, type: 3}
+  musicVolume: 0.7
+  entryEyeSound: {fileID: 8300000, guid: 96acefc1a8e408548a364490b1f003c4, type: 3}
+  entryErrorSound: {fileID: 8300000, guid: 39f57fd71699d4b1882c79c05397561d, type: 3}
+  entrySoundVolume: 0.7
+  entryDownloadGain: 8
+  entryErrorGain: 0.3
   phase1EntryEyeFrames:
   - {fileID: 7354185740430724223, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}
   - {fileID: -3098392244586271875, guid: dc07131b56552cf45a1a7d8457a70eac, type: 3}

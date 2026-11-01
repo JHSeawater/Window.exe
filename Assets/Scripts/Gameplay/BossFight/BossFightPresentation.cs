@@ -16,6 +16,28 @@ namespace WindowExe.BossFight
         private readonly BossFightSettings settings;
         private readonly BossDesktopSession session;
         private readonly GameObject root,downloadRoot;
+        private readonly AudioSource entryAudio;
+        private readonly AudioSource musicAudio;
+        private readonly AudioSource successAudio;
+        private GameObject successBlackout;
+        private BossEndingVideo endingVideo;
+        internal bool EndingBusy=>endingVideo!=null && endingVideo.Busy;
+        internal bool EndingFinished=>endingVideo!=null && endingVideo.Finished;
+        private bool successStarted;
+        private double successElapsed,successLastDsp;
+        internal bool SuccessComplete {get;private set;}
+        internal int SuccessErrorPlayCount {get;private set;}
+        private readonly bool[] entryEyeSoundPlayed=new bool[BossFightSettings.EntryWindowCount];
+        private readonly bool[] entryErrorSoundPlayed=new bool[BossFightSettings.EntryWindowCount];
+        private readonly bool[] transitionDosSoundPlayed=new bool[8];
+        private bool phase1DropSoundPlayed;
+        private bool entryDownloadSoundPlayed,entryWarningSoundPlayed,entryAudioPaused;
+        internal int EntrySoundPlayCount {get;private set;}
+        internal AudioClip LastEntrySound {get;private set;}
+        internal int EyeContactPlayCount {get;private set;}
+        internal AudioClip LastEyeContactSound {get;private set;}
+        internal int TransitionSoundPlayCount {get;private set;}
+        internal AudioClip LastTransitionSound {get;private set;}
         private readonly SpriteRenderer background,trash,boss,warning;
         private readonly List<TextMeshPro> writing=new List<TextMeshPro>();
         private readonly List<BossPoint> writingPositions=new List<BossPoint>();
@@ -62,7 +84,7 @@ namespace WindowExe.BossFight
         private BossHiddenLayer hidden;
         private IBossFightModel renderedModel;
         private IReadOnlyList<BossEye> transitionEyes;
-        private double successShownAt=-1,returnStarted;
+        private double returnStarted;
         private BossPoint lastBoss,returnFrom,visualBoss;
         private bool returning;
         private double lastTime;
@@ -74,6 +96,15 @@ namespace WindowExe.BossFight
             entryBackdrop?.ShowBehindEntry();
             windowRenderers=session.View.GetComponentsInChildren<Renderer>(true);
             root=new GameObject("Boss fight world");
+            entryAudio=root.AddComponent<AudioSource>();
+            entryAudio.playOnAwake=false;entryAudio.loop=false;entryAudio.spatialBlend=0;
+            entryAudio.volume=settings.entrySoundVolume;
+            musicAudio=root.AddComponent<AudioSource>();
+            musicAudio.playOnAwake=false;musicAudio.loop=true;musicAudio.spatialBlend=0;
+            musicAudio.volume=settings.musicVolume;
+            successAudio=root.AddComponent<AudioSource>();
+            successAudio.playOnAwake=false;successAudio.loop=false;successAudio.spatialBlend=0;
+            successAudio.volume=settings.entrySoundVolume*settings.phase2SuccessGain;
             circleTexture=new Texture2D(64,64,TextureFormat.RGBA32,false) {name="Boss eye circle (Runtime)",filterMode=FilterMode.Bilinear};
             var colors=new Color[64*64];
             for(int y=0;y<64;y++) for(int x=0;x<64;x++)
@@ -175,8 +206,74 @@ namespace WindowExe.BossFight
             renderer.sortingOrder=order;
         }
         public void ShowTransition(bool value){errorPanel.enabled=value;if(errorText!=null)errorText.gameObject.SetActive(value);}
+        internal void UpdateAudio(IBossFightModel model,bool entering)
+        {
+            var track=entering || model.Outcome!=BossOutcome.None ? null
+                : model is BossPhase1Model ? settings.phase1Music : settings.phase2Music;
+            if(musicAudio.clip!=track)
+            {
+                musicAudio.Stop();musicAudio.clip=track;
+                if(track!=null)
+                {musicAudio.Play();if(model.Clock.IsPaused)musicAudio.Pause();}
+            }
+            if(entryAudioPaused!=model.Clock.IsPaused)
+            {
+                entryAudioPaused=model.Clock.IsPaused;
+                if(entryAudioPaused){entryAudio.Pause();musicAudio.Pause();successAudio.Pause();}
+                else{entryAudio.UnPause();musicAudio.UnPause();successAudio.UnPause();}
+            }
+            UpdateSuccess(model.Clock.IsPaused);
+            endingVideo?.Tick(model.Clock.IsPaused);
+        }
+        internal void BeginPhase2Success()
+        {
+            if(successStarted)return;
+            successStarted=true;successLastDsp=AudioSettings.dspTime;
+            entryAudio.Stop();musicAudio.Stop();
+            EnsureBlackout();successBlackout.SetActive(false);
+            successAudio.clip=settings.phase2SuccessSound;
+            if(successAudio.clip!=null)successAudio.Play();
+            UpdateSuccess(false);
+        }
+        private void EnsureBlackout()
+        {
+            if(successBlackout!=null)return;
+            successBlackout=new GameObject("Boss success blackout",typeof(RectTransform),typeof(Canvas),typeof(GraphicRaycaster));
+            successBlackout.transform.SetParent(root.transform,false);
+            var canvas=successBlackout.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=32767;
+            var cover=new GameObject("Black",typeof(RectTransform),typeof(Image));cover.transform.SetParent(successBlackout.transform,false);
+            var rect=(RectTransform)cover.transform;rect.anchorMin=Vector2.zero;rect.anchorMax=Vector2.one;
+            // Cover fractional canvas edges at odd Game View resolutions as well.
+            rect.offsetMin=new Vector2(-2,-2);rect.offsetMax=new Vector2(2,2);
+            cover.GetComponent<Image>().color=Color.black;
+        }
+        internal void BeginEndingVideo(BossOutcome outcome)
+        {
+            if(endingVideo!=null)return;
+            var clip=outcome==BossOutcome.Success?settings.normalEndingVideo:settings.badEndingVideo;
+            if(clip==null)return;
+            entryAudio.Stop();successAudio.Stop();musicAudio.Stop();
+            EnsureBlackout();successBlackout.SetActive(true);
+            endingVideo=new BossEndingVideo(successBlackout.transform,clip);
+        }
+        private void UpdateSuccess(bool paused)
+        {
+            if(!successStarted || SuccessComplete)return;
+            double now=AudioSettings.dspTime,delta=Math.Max(0,now-successLastDsp);successLastDsp=now;
+            if(paused)return;
+            successElapsed+=delta;
+            if(successAudio.clip==null || successElapsed>=successAudio.clip.length && !successAudio.isPlaying)
+            {entryAudio.Stop();successAudio.Stop();successBlackout.SetActive(true);SuccessComplete=true;return;}
+            while(SuccessErrorPlayCount<BossFightSettings.SuccessErrorCount && successElapsed>=SuccessErrorPlayCount*BossFightSettings.SuccessErrorInterval)
+            {
+                if(settings.entryErrorSound!=null)entryAudio.PlayOneShot(settings.entryErrorSound,settings.phase2SuccessErrorGain);
+                SuccessErrorPlayCount++;
+            }
+        }
         public void Render(IBossFightModel model,TaskbarController taskbar,double entryAge=-1)
         {
+            UpdateAudio(model,entryAge>=0);
+            if(model.Outcome==BossOutcome.Success)return;
             if(entryAge<0 || entryAge>=settings.EntryPreludeSeconds+BossFightSettings.EntryWarningSeconds)
             {entryBackdrop?.Dispose();entryBackdrop=null;}
             else entryBackdrop?.FitCamera();
@@ -288,8 +385,6 @@ namespace WindowExe.BossFight
             percent.text=model.Outcome==BossOutcome.Success?"다운로드 취소됨":$"{Math.Floor(value):0}%";
             if(first!=null && value>=30 && flash)percent.text="계산 중…";
             if(model.Outcome==BossOutcome.Success)foreach(var block in blocks)block.enabled=false;
-            if(model.Outcome==BossOutcome.Success)
-            {if(successShownAt<0)successShownAt=Time.realtimeSinceStartupAsDouble;percent.enabled=Time.realtimeSinceStartupAsDouble-successShownAt<1.5;}
             hiddenBar.gameObject.SetActive(model.Minimized);
             if(model.Minimized && taskbar.Buttons.TryGetValue(session.GetSnapshot().Windows[0].WindowId,out var button))
             {
@@ -315,6 +410,8 @@ namespace WindowExe.BossFight
             if(entryPanel!=null)
             {
                 entryPanel.enabled=entering && entryAge>=settings.EntryPreludeSeconds && entryAge<settings.EntryPreludeSeconds+BossFightSettings.EntryWarningSeconds;
+                if(entryPanel.enabled && !entryWarningSoundPlayed)
+                {entryWarningSoundPlayed=true;PlayEntrySound(settings.entryErrorSound,settings.entryErrorGain);}
                 var rect=entryPanel.sprite.rect;double factor=Math.Min(1280/rect.width,800/rect.height);
                 Place(entryPanel,new BossPoint(960,516),rect.width*factor,rect.height*factor,order+41+BossFightSettings.EntryWindowCount);
             }
@@ -328,6 +425,8 @@ namespace WindowExe.BossFight
             {ClearEntryDownload();return;}
             if(entryDownloadRoot==null)
             {
+                if(!entryDownloadSoundPlayed)
+                {entryDownloadSoundPlayed=true;PlayEntrySound(settings.entryDownloadSound,settings.entryDownloadGain);}
                 entryDownloadRoot=new GameObject("Boss entry downloading");entryDownloadRoot.transform.SetParent(root.transform,false);
                 entryDownloadPanel=Sprite("Downloading window",settings.phase1DownloadSprite,Color.white,centered:true);
                 entryDownloadBorder=Sprite("Entry download border",WindowTitleBar.WhiteSprite,new Color(.65f,.67f,.67f));
@@ -399,8 +498,13 @@ namespace WindowExe.BossFight
                 var window=entryEyeWindows[i];
                 double elapsed=age-settings.EntryDownloadDuration-(BossFightSettings.EntryWindowCount-1)*BossFightSettings.EntryWindowInterval;
                 window.enabled=age-settings.EntryDownloadDuration>=i*BossFightSettings.EntryWindowInterval;
+                if(window.enabled && !entryEyeSoundPlayed[i])
+                {entryEyeSoundPlayed[i]=true;PlayEntrySound(settings.entryEyeSound);}
                 Sprite image=settings.phase1EntryErrorSprite;
-                if(age<settings.EntryErrorsStart+i*BossFightSettings.EntryErrorInterval)
+                bool error=age>=settings.EntryErrorsStart+i*BossFightSettings.EntryErrorInterval;
+                if(error && !entryErrorSoundPlayed[i])
+                {entryErrorSoundPlayed[i]=true;PlayEntrySound(settings.entryErrorSound,settings.entryErrorGain);}
+                if(!error)
                 {
                     int frame=0;
                     while(frame<settings.phase1EntryEyeFrames.Length-1 && elapsed>=settings.EntryFrameDuration(frame))
@@ -417,6 +521,31 @@ namespace WindowExe.BossFight
             if(entryEyeWindows==null)return;
             foreach(var window in entryEyeWindows){window.gameObject.SetActive(false);Object.Destroy(window.gameObject);}
             entryEyeWindows=null;
+        }
+        internal void PlayPhase1Drop()
+        {
+            if(phase1DropSoundPlayed)return;
+            phase1DropSoundPlayed=true;
+            PlayTransitionSound(settings.phase1DropSound,settings.phase1DropGain);
+        }
+        private void PlayTransitionSound(AudioClip clip,float gain=1)
+        {
+            if(clip==null)return;
+            entryAudio.PlayOneShot(clip,gain);
+            LastTransitionSound=clip;TransitionSoundPlayCount++;
+        }
+        internal void PlayEyeContact(IBossFightModel model)
+        {
+            var clip=model is BossPhase1Model?settings.phase1EyeContactSound:settings.phase2EyeContactSound;
+            if(clip==null)return;
+            entryAudio.PlayOneShot(clip);
+            LastEyeContactSound=clip;EyeContactPlayCount++;
+        }
+        private void PlayEntrySound(AudioClip clip,float gain=1)
+        {
+            if(clip==null)return;
+            entryAudio.PlayOneShot(clip,gain);
+            LastEntrySound=clip;EntrySoundPlayCount++;
         }
         private void RenderTransitionDosWindows(BossPhase1Model first,int order)
         {
@@ -435,6 +564,11 @@ namespace WindowExe.BossFight
                 var window=transitionDosWindows[i];
                 int step=i%4;
                 window.enabled=first.TransitionAge-1.5>=step*.08;
+                if(window.enabled && !transitionDosSoundPlayed[i])
+                {
+                    transitionDosSoundPlayed[i]=true;
+                    PlayTransitionSound(settings.entryErrorSound,settings.transitionDosGain);
+                }
                 var position=i<4?new BossPoint(690+step*60,330+step*44):new BossPoint(1230-step*60,702-step*44);
                 Place(window,position,rect.width*factor,rect.height*factor,order+32+i);
             }
@@ -482,6 +616,10 @@ namespace WindowExe.BossFight
         }
         public void Dispose()
         {
+            endingVideo?.Dispose();endingVideo=null;
+            entryAudio.Stop();
+            musicAudio.Stop();
+            successAudio.Stop();
             entryBackdrop?.Dispose();entryBackdrop=null;
             if(entryWindowHidden)foreach(var renderer in windowRenderers)if(renderer!=null)renderer.forceRenderingOff=false;
             ClearTransitionDosWindows();

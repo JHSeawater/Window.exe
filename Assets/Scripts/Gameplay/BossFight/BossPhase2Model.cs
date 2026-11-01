@@ -36,6 +36,7 @@ namespace WindowExe.BossFight
         public bool Invulnerable { get; set; }
         public double HiddenRemaining => Minimized?Math.Max(0,hiddenUntil-Clock.CombatTime):0;
         public event Action Respawned;
+        public event Action EyeContact;
         public event Action<BossOutcome> Finished;
         public BossPhase2Model(BossFightSettings settings,double inputTime)
         {
@@ -203,7 +204,7 @@ namespace WindowExe.BossFight
                     var contact=BossRect.Lerp(Body,end,hit); var contactTrash=BossPoint.Lerp(Trash,trashEnd,hit);
                     MoveWorld(elapsed,contact,contactTrash);
                     if(Clock.DownloadExpired) { Finish(BossOutcome.BadEnding); break; }
-                    Respawn();
+                    HitEye();
                     origin=destination=Body; originalTrash=trash=Trash; start=Clock.InputTime;
                     continue;
                 }
@@ -218,7 +219,7 @@ namespace WindowExe.BossFight
                     {
                         Minimized=false;
                         if(Overlapping())
-                        {Respawn();origin=destination=Body;originalTrash=trash=Trash;start=Clock.InputTime;continue;}
+                        {HitEye();origin=destination=Body;originalTrash=trash=Trash;start=Clock.InputTime;continue;}
                     }
                 }
                 SynchronizeAttacks();
@@ -238,7 +239,7 @@ namespace WindowExe.BossFight
             else if(wasHidden && (toggle||boundaryRestore)) Minimized=false;
             bool hit=wasHidden ? !Minimized && Overlapping() : !Minimized && (boundaryHit||Overlapping());
             boundaryHit=boundaryRestore=false;
-            if(hit) { Respawn(); return; }
+            if(hit) { HitEye(); return; }
             if(successDrop && !Minimized && Captured && (Boss-Trash).SqrMagnitude<=settings.dropRadius*settings.dropRadius) Finish(BossOutcome.Success);
             if(Outcome==BossOutcome.None) {SynchronizeAttacks();Attacks.Resolve();}
         }
@@ -257,6 +258,7 @@ namespace WindowExe.BossFight
             Clock.SetPause(reason,value,observedTime);
             if(!Clock.IsPaused) boundaryHit=Overlapping();
         }
+        private void HitEye(){EyeContact?.Invoke();Respawn();}
         public bool Respawn()
         {
             if(Outcome!=BossOutcome.None || Clock.DownloadExpired) return false;
