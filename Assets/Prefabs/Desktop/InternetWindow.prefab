@@ -94,7 +94,7 @@ MonoBehaviour:
   requireMuzzleInWindowExeToShoot: 1
   offlineIconSprite: {fileID: 21300000, guid: 6910e53dc6bda4f5cacfd3518ac0d982, type: 3}
   offlineIconTint: {r: 1, g: 1, b: 1, a: 1}
-  offlineIconSize: {x: 0.75, y: 0.5}
+  offlineIconSize: {x: 0.75, y: -0.5}
   offlineIconOffset: {x: -3, y: 0}
   blindDiskColor: {r: 0.5, g: 0.53, b: 0.58, a: 1}
   revealedDiskColors:
