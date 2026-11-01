@@ -29,7 +29,7 @@
 | 게임 규칙·보스전 설정 | [GDD](docs/GDD.md), [BOSS_FIGHT](docs/BOSS_FIGHT.md) |
 | 우선순위·시연 | [제작 계획의 현재 작업 운영](docs/PRODUCTION_PLAN.md#현재-작업-운영-확정--2026-10-31-사용자-지시) |
 
-데스크톱은 Unity에서 `Assets/Scenes/Desktop.unity`를 열고 Play한다. Build Settings는 StartScene → Desktop 순서이며, 시작 자원 누락 시 진입 방식과 최신 병합 연결은 개발 가이드 21장을 따른다. 보스전 전체 검증 씬은 `Assets/Scenes/BossFightFullValidation.unity`, 2페이즈 단독은 `BossFightValidation.unity`, 입력 도구는 `BossInputValidation.unity`다. 실행법과 인계 API는 개발 가이드 17-10장에 둔다.
+데스크톱은 Unity에서 `Assets/Scenes/Desktop.unity`를 열고 Play한다. Build Settings는 StartScene → Desktop → YouAreDie 순서이며, 시작 자원 누락 시 진입 방식과 최신 병합 연결은 개발 가이드 21장을 따른다. YouAreDie는 엿보기 실패 후 새 입력으로 Desktop을 재시작하는 화면이며 보스전 엔딩과 구분한다. 보스전 전체 검증 씬은 `Assets/Scenes/BossFightFullValidation.unity`, 2페이즈 단독은 `BossFightValidation.unity`, 입력 도구는 `BossInputValidation.unity`다. 실행법과 인계 API는 개발 가이드 17-10장에 둔다.
 
 Assets는 역할별·기능별 배치(개발 가이드 2장)를 따르고, 글꼴은 제공 NeoDunggeunmo와 공통 GameFontSettings(11장)를 사용한다. 좌하단 시작 메뉴는 제안 상태(12장)이며, 간헐적인 마우스 끊김은 제외 상태(체크리스트 23장)다. 문서 정리로 해당 상태를 바꾸지 않는다.
 

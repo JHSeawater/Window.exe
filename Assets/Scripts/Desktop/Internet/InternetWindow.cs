@@ -1840,10 +1840,6 @@ namespace WindowExe.Desktop.Desktop.Window
 
             if (!online)
             {
-                // Phase 1: WINDOW.exe 창이 겹쳐진 상태에서는 하노이 탑 조작 불가
-                if (IsHanoiBlockedByWindowExe())
-                    return;
-
                 for (int p = 0; p < HanoiPegCount; p++)
                 {
                     if (pegRects[p].Contains(local))
@@ -1918,7 +1914,7 @@ namespace WindowExe.Desktop.Desktop.Window
             if (pegIndex < 0 || pegIndex >= HanoiPegCount)
                 return false;
 
-            if (IsOnline || IsHanoiBlockedByWindowExe())
+            if (IsOnline)
                 return false;
 
             // 1. 아직 선택된 막대가 없을 때: 클릭한 막대의 맨 위 원반을 위로 살짝 띄움
@@ -2109,33 +2105,6 @@ namespace WindowExe.Desktop.Desktop.Window
             AudioClip clip = AudioClip.Create(clipName, sampleCount, 1, sampleRate, false);
             clip.SetData(samples, 0);
             return clip;
-        }
-
-        public bool IsHanoiBlockedByWindowExe()
-        {
-            var manager = Manager != null ? Manager : WindowManager.Instance;
-            if (manager == null) return false;
-
-            Rect myBounds = GetWindowWorldRect(this);
-
-            foreach (var process in manager.ActiveProcesses)
-            {
-                if (process == null || process.State == WindowState.Minimized)
-                    continue;
-
-                Window other = process.Instance;
-                if (other == null || other == this || !other.gameObject.activeInHierarchy)
-                    continue;
-
-                if (!IsRevealWindowProcess(process))
-                    continue;
-
-                Rect otherBounds = GetWindowWorldRect(other);
-                if (myBounds.Overlaps(otherBounds))
-                    return true;
-            }
-
-            return false;
         }
 
         private bool IsRevealWindowProcess(WindowProcess process)

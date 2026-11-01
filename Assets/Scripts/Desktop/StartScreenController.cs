@@ -264,6 +264,12 @@ namespace WindowExe.Desktop
             if (isTransitioning)
                 return;
 
+            if (CheckQuitPressed())
+            {
+                Application.Quit();
+                return;
+            }
+
             // PRESS ANY KEY ±ôºýÀÓ
             UpdateBlink(elapsedTime);
 
@@ -418,6 +424,19 @@ namespace WindowExe.Desktop
         // =========================================
         // Input Detection
         // =========================================
+
+        private bool CheckQuitPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                return true;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetKeyDown(KeyCode.Escape);
+#else
+            return false;
+#endif
+        }
 
         public bool CheckAnyKeyPressed()
         {

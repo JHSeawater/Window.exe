@@ -179,24 +179,72 @@ namespace WindowExe.Desktop.Tests
             CollectionAssert.AreEqual(new[] { 2, 3 }, internet.GetPegDiskNumbers(2));
         }
 
-        [Test]
-        public void OverlappingWindowExeBlocksHanoiManipulation()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void PartialWindowExeOverlapAllowsUncoveredHanoiSelectionAndMove(bool internetInFront)
         {
             internet.MoveTo(Vector2.zero);
             var windowExe = manager.Open("window");
             Assert.IsNotNull(windowExe);
+            windowExe.Resize(new Vector2(2.4f, 1.2f));
+            windowExe.MoveTo(new Vector2((internet.Size.x + windowExe.Size.x) * .5f - .1f, 0));
+            if (internetInFront) manager.TryRequest(internet, WindowAction.Activate);
+            Assert.IsTrue(internet.OuterBounds.Overlaps(windowExe.OuterBounds));
 
-            // WINDOW.exe 창이 인터넷 창과 겹쳐 있을 때는 조작 불가
-            windowExe.MoveTo(Vector2.zero);
-            Assert.IsTrue(internet.IsHanoiBlockedByWindowExe());
-            Assert.IsFalse(internet.TryClickPeg(0));
-            Assert.AreEqual(-1, internet.SelectedPeg);
+            WithPointerCamera(camera =>
+            {
+                for (var peg = 0; peg < 2; peg++)
+                {
+                    var point = PegWorldPoint(peg);
+                    Assert.IsFalse(windowExe.Hit(point), "The clicked peg must be outside WINDOW.exe.");
+                    internet.PointerLeftPressed(camera.WorldToScreenPoint(point));
+                    Assert.AreEqual(peg == 0 ? 0 : -1, internet.SelectedPeg);
+                }
+            });
+            CollectionAssert.AreEqual(new[] { 1, 2 }, internet.GetPegDiskNumbers(0));
+            CollectionAssert.AreEqual(new[] { 3 }, internet.GetPegDiskNumbers(1));
+            Assert.IsFalse(internet.IsOnline);
+        }
 
-            // WINDOW.exe 창을 멀리 치우면 조작 가능
-            windowExe.MoveTo(new Vector2(25f, 25f));
-            Assert.IsFalse(internet.IsHanoiBlockedByWindowExe());
-            Assert.IsTrue(internet.TryClickPeg(0));
-            Assert.AreEqual(0, internet.SelectedPeg);
+        [TestCase(false, false, false)]
+        [TestCase(true, false, true)]
+        [TestCase(false, true, true)]
+        public void CoveredHanoiPointRespectsWindowOrderAndMinimization(bool internetInFront, bool minimized, bool canSelect)
+        {
+            internet.MoveTo(Vector2.zero);
+            var point = PegWorldPoint(0);
+            var windowExe = manager.Open("window");
+            windowExe.MoveTo(point);
+            Assert.IsTrue(windowExe.Hit(point));
+            if (internetInFront) manager.TryRequest(internet, WindowAction.Activate);
+            if (minimized) manager.Minimize("window");
+
+            WithPointerCamera(camera => internet.PointerLeftPressed(camera.WorldToScreenPoint(point)));
+            Assert.AreEqual(canSelect ? 0 : -1, internet.SelectedPeg);
+            CollectionAssert.AreEqual(new[] { 1, 2, 3 }, internet.GetPegDiskNumbers(0));
+        }
+
+        private Vector3 PegWorldPoint(int peg)
+        {
+            var pegs = (Rect[])typeof(InternetWindow).GetField("pegRects",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(internet);
+            return internet.transform.TransformPoint(pegs[peg].center);
+        }
+
+        private void WithPointerCamera(System.Action<Camera> action)
+        {
+            GameObject cameraObject = null;
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                cameraObject = new GameObject("Hanoi overlap pointer camera", typeof(Camera));
+                cameraObject.tag = "MainCamera";
+                camera = cameraObject.GetComponent<Camera>();
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0, 0, -10);
+            }
+            try { action(camera); }
+            finally { if (cameraObject != null) Object.DestroyImmediate(cameraObject); }
         }
 
         [Test]
