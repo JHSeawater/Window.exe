@@ -99,7 +99,7 @@ namespace WindowExe.Desktop.Editor
             // 6. PeepPuzzleWindow에 연결
             window.SetupPuzzleObjects(clues, new[] { dangerObj }, new[] { watcherObj }, null);
             window.DangerMaxTime = 3.0f;
-            window.WatcherMaxUnseenTime = 10.0f;
+            window.WatcherMaxUnseenTime = 15.0f;
             window.TargetWindowId = "window";
         }
 

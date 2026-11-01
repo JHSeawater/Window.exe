@@ -11,5 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Desktop.unity
     guid: ca94f005b47a9ef46a9988d144f8e6f9
+  - enabled: 1
+    path: Assets/Scenes/YouAreDie.unity
+    guid: 8883753cda3704069844458094f7ca72
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

@@ -1515,7 +1515,9 @@ MonoBehaviour:
   primarySprite: {fileID: 21300000, guid: c07ff18694b362f42a03629708ded7f3, type: 3}
   targetWindowId: window
   dangerMaxTime: 3
-  watcherMaxUnseenTime: 10
+  watcherMaxUnseenTime: 15
+  loadGameOverScene: 1
+  gameOverSceneName: YouAreDie
   clues:
   - {fileID: 0}
   - {fileID: 0}

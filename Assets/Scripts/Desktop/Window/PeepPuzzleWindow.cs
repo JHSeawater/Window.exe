@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 namespace WindowExe.Desktop.Desktop.Window
 {
@@ -17,7 +18,11 @@ namespace WindowExe.Desktop.Desktop.Window
 
         [Header("Puzzle Timers (Seconds)")]
         [SerializeField] private float dangerMaxTime = 3.0f;
-        [SerializeField] private float watcherMaxUnseenTime = 10.0f;
+        [SerializeField] private float watcherMaxUnseenTime = 15.0f;
+
+        [Header("Game Over / Scene Transition")]
+        [SerializeField] private bool loadGameOverScene = true;
+        [SerializeField] private string gameOverSceneName = "YouAreDie";
 
         [Header("Puzzle Objects (Secondary 하위 오브젝트)")]
         [SerializeField] private List<PeepPuzzleObject> clues = new List<PeepPuzzleObject>();
@@ -53,6 +58,8 @@ namespace WindowExe.Desktop.Desktop.Window
         public float WatcherTimer => currentWatcherTimer;
         public float DangerMaxTime { get => dangerMaxTime; set => dangerMaxTime = value; }
         public float WatcherMaxUnseenTime { get => watcherMaxUnseenTime; set => watcherMaxUnseenTime = value; }
+        public bool LoadGameOverScene { get => loadGameOverScene; set => loadGameOverScene = value; }
+        public string GameOverSceneName { get => gameOverSceneName; set => gameOverSceneName = value; }
         public bool IsCleared => isCleared;
         public bool IsGameOver => isGameOver;
         public string TargetWindowId { get => targetWindowId; set => targetWindowId = value; }
@@ -450,6 +457,11 @@ namespace WindowExe.Desktop.Desktop.Window
 
             onGameOver?.Invoke(reason);
             OnGameOverTriggered?.Invoke(reason);
+
+            if (loadGameOverScene && Application.isPlaying && !string.IsNullOrEmpty(gameOverSceneName))
+            {
+                SceneManager.LoadScene(gameOverSceneName);
+            }
         }
 
         private void PlaySound(AudioClip clip)

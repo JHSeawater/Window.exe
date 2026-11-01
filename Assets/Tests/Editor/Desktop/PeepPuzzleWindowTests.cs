@@ -203,7 +203,7 @@ namespace WindowExe.Desktop.Tests
         }
 
         [Test]
-        public void WatcherObjectTriggersGameOverAfter10SecondsOutOfViewAndResetsWhenInView()
+        public void WatcherObjectTriggersGameOverAfter15SecondsOutOfViewAndResetsWhenInView()
         {
             var gameOverTriggered = false;
             string gameOverReason = null;
@@ -223,9 +223,9 @@ namespace WindowExe.Desktop.Tests
 
             // 2. 윈도우 시야 밖으로 벗어남 -> 미관측 타이머 누적 시작
             puzzleWindow.OverridePeepViewport = new Rect(100f, 100f, 1f, 1f);
-            puzzleWindow.ManualTick(9.9f);
+            puzzleWindow.ManualTick(14.9f);
             Assert.IsFalse(gameOverTriggered);
-            Assert.AreEqual(9.9f, puzzleWindow.WatcherTimer, 0.001f);
+            Assert.AreEqual(14.9f, puzzleWindow.WatcherTimer, 0.001f);
 
             // 3. 윈도우를 다시 비춤 -> 타이머 0으로 리셋!
             puzzleWindow.OverridePeepViewport = new Rect(watcherPos.x - 1f, watcherPos.y - 1f, 2f, 2f);
@@ -233,9 +233,9 @@ namespace WindowExe.Desktop.Tests
             Assert.IsFalse(gameOverTriggered);
             Assert.AreEqual(0f, puzzleWindow.WatcherTimer, 0.001f);
 
-            // 4. 다시 시야 밖으로 벗어나서 10.1초 경과 -> 게임오버 발생!
+            // 4. 다시 시야 밖으로 벗어나서 15.1초 경과 -> 게임오버 발생!
             puzzleWindow.OverridePeepViewport = new Rect(100f, 100f, 1f, 1f);
-            puzzleWindow.ManualTick(10.1f);
+            puzzleWindow.ManualTick(15.1f);
             Assert.IsTrue(gameOverTriggered);
             Assert.IsTrue(puzzleWindow.IsGameOver);
             StringAssert.Contains("감시 대상", gameOverReason);
@@ -287,7 +287,7 @@ namespace WindowExe.Desktop.Tests
         }
 
         [Test]
-        public void MultipleWatcherObjects_AnyOneLeftUnseenFor10SecondsTriggersGameOver()
+        public void MultipleWatcherObjects_AnyOneLeftUnseenFor15SecondsTriggersGameOver()
         {
             var secondary = windowGo.transform.Find("Secondary");
             var watcherBGo = new GameObject("WatcherB");
@@ -305,14 +305,23 @@ namespace WindowExe.Desktop.Tests
             var watcherAPos = (Vector2)watcher.transform.position;
             puzzleWindow.OverridePeepViewport = new Rect(watcherAPos.x - 0.5f, watcherAPos.y - 0.5f, 1f, 1f);
 
-            // 9초 동안 A만 봄
-            puzzleWindow.ManualTick(9.0f);
+            // 14초 동안 A만 봄
+            puzzleWindow.ManualTick(14.0f);
             Assert.IsFalse(gameOverTriggered);
 
-            // 1.5초 더 A만 봄 (Watcher B는 총 10.5초 방치됨) -> 게임오버!
+            // 1.5초 더 A만 봄 (Watcher B는 총 15.5초 방치됨) -> 게임오버!
             puzzleWindow.ManualTick(1.5f);
             Assert.IsTrue(gameOverTriggered);
             Assert.IsTrue(puzzleWindow.IsGameOver);
+        }
+
+        [Test]
+        public void DefaultValuesMatchSpecification_Danger3Sec_Watcher15Sec_GameOverSceneYouAreDie()
+        {
+            Assert.AreEqual(3.0f, puzzleWindow.DangerMaxTime, 0.001f);
+            Assert.AreEqual(15.0f, puzzleWindow.WatcherMaxUnseenTime, 0.001f);
+            Assert.IsTrue(puzzleWindow.LoadGameOverScene);
+            Assert.AreEqual("YouAreDie", puzzleWindow.GameOverSceneName);
         }
     }
 }

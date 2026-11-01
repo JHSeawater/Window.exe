@@ -84,6 +84,7 @@ namespace WindowExe.Desktop
             if (targetImageIcon != null) imageIcon = targetImageIcon;
             if (targetKeyIcon != null) keyFileIcon = targetKeyIcon;
 
+            WifiConnection.ResetGlobalState();
             ResolveReferences();
             if (isActiveAndEnabled)
             {
@@ -93,6 +94,7 @@ namespace WindowExe.Desktop
 
         private void Awake()
         {
+            WifiConnection.ResetGlobalState();
             ResolveReferences();
             ApplyInitialIconVisibility();
         }
