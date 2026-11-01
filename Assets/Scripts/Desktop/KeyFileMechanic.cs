@@ -76,7 +76,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ´õºíÅ¬¸¯
+        // ï¿½ï¿½ï¿½ï¿½Å¬ï¿½ï¿½
         // ==========================================
 
         public void HandleLeftClick(
@@ -106,7 +106,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ¿ìÅ¬¸¯ ¸Þ´º
+        // ï¿½ï¿½Å¬ï¿½ï¿½ ï¿½Þ´ï¿½
         // ==========================================
 
         public void ShowContextMenu(Vector2 screenPosition)
@@ -126,7 +126,7 @@ namespace WindowExe.Desktop
             if (root == null)
                 return;
 
-            // ¸Þ´º ¹Ù±ù Å¬¸¯ ½Ã ´Ý±â
+            // ï¿½Þ´ï¿½ ï¿½Ù±ï¿½ Å¬ï¿½ï¿½ ï¿½ï¿½ ï¿½Ý±ï¿½
             Button dismiss = CreateButton(
                 root,
                 "Dismiss",
@@ -138,7 +138,7 @@ namespace WindowExe.Desktop
             Stretch((RectTransform)dismiss.transform);
             dismiss.transform.SetAsFirstSibling();
 
-            // ¸Þ´º ¹è°æ
+            // ï¿½Þ´ï¿½ ï¿½ï¿½ï¿½
             RectTransform menu = CreatePanel(
                 root,
                 "ContextMenu",
@@ -148,8 +148,8 @@ namespace WindowExe.Desktop
 
             menu.pivot = new Vector2(0f, 1f);
 
-            // ±âÁ¸ CanvasÀÇ Ä«¸Þ¶ó¸¦ »ç¿ëÇÏ¿©
-            // È­¸é ÁÂÇ¥¸¦ UI ÁÂÇ¥·Î º¯È¯
+            // ï¿½ï¿½ï¿½ï¿½ Canvasï¿½ï¿½ Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½
+            // È­ï¿½ï¿½ ï¿½ï¿½Ç¥ï¿½ï¿½ UI ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½È¯
             RectTransformUtility
                 .ScreenPointToLocalPointInRectangle(
                     root,
@@ -172,11 +172,11 @@ namespace WindowExe.Desktop
 
             menu.anchoredPosition = p;
 
-            // ¿­±â ¹öÆ°
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ°
             Button openButton = CreateButton(
                 menu,
                 "Open",
-                "¿­±â",
+                "ì—´ê¸°",
                 new Color(.94f, .94f, .94f),
                 () =>
                 {
@@ -191,11 +191,11 @@ namespace WindowExe.Desktop
                 new Vector2(162f, 30f)
             );
 
-            // ÀÌ¸§ ¹Ù²Ù±â ¹öÆ°
+            // ï¿½Ì¸ï¿½ ï¿½Ù²Ù±ï¿½ ï¿½ï¿½Æ°
             Button renameButton = CreateButton(
                 menu,
                 "Rename",
-                "ÀÌ¸§ ¹Ù²Ù±â",
+                "ì´ë¦„ ë°”ê¾¸ê¸°",
                 new Color(.94f, .94f, .94f),
                 () =>
                 {
@@ -212,31 +212,31 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ÆÄÀÏ ¿­±â
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         // ==========================================
 
         private void OpenFile()
         {
-            // key.txt »óÅÂ
+            // key.txt ï¿½ï¿½ï¿½ï¿½
             if (!converted)
             {
                 ShowDialog(
-                    "ÆÄÀÏ ¿­±â ¿À·ù",
-                    "ÆÄÀÏ ÀÌ¸§ÀÌ Á¤È®ÇÏÁö ¾Ê¾Æ ÆÄÀÏÀ» ¿­ ¼ö ¾ø½À´Ï´Ù.",
-                    "È®ÀÎ",
+                    "íŒŒì¼ ì—´ê¸° ì˜¤ë¥˜",
+                    "íŒŒì¼ ì´ë¦„ì´ ì •í™•í•˜ì§€ ì•Šì•„ íŒŒì¼ì„ ì—´ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.",
+                    "í™•ì¸",
                     () => { }
                 );
 
                 return;
             }
 
-            // key.png »óÅÂ
+            // key.png ï¿½ï¿½ï¿½ï¿½
             WindowManager manager = WindowManager.Instance;
 
             if (manager == null)
             {
                 Debug.LogError(
-                    "[KeyFileMechanic] WindowManager°¡ ¾ø½À´Ï´Ù.",
+                    "[KeyFileMechanic] WindowManagerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.",
                     this
                 );
 
@@ -248,18 +248,18 @@ namespace WindowExe.Desktop
             if (window == null)
             {
                 Debug.LogError(
-                    "[KeyFileMechanic] ÀÌ¹ÌÁö Ã¢À» ¿­ ¼ö ¾ø½À´Ï´Ù. " +
-                    "WindowManager¿¡ key-image°¡ µî·ÏµÆ´ÂÁö È®ÀÎÇÏ¼¼¿ä.",
+                    "[KeyFileMechanic] ï¿½Ì¹ï¿½ï¿½ï¿½ Ã¢ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½. " +
+                    "WindowManagerï¿½ï¿½ key-imageï¿½ï¿½ ï¿½ï¿½ÏµÆ´ï¿½ï¿½ï¿½ È®ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½.",
                     this
                 );
 
                 return;
             }
 
-            // ÀÌ¹ÌÁö Ã¢ Á¦¸ñ
+            // ï¿½Ì¹ï¿½ï¿½ï¿½ Ã¢ ï¿½ï¿½ï¿½ï¿½
             window.SetWindowTitle("key.png");
 
-            // ÀÌ¹ÌÁö Ã¢¿¡ ±×¸² ¼³Á¤
+            // ï¿½Ì¹ï¿½ï¿½ï¿½ Ã¢ï¿½ï¿½ ï¿½×¸ï¿½ ï¿½ï¿½ï¿½ï¿½
             ImageWindow imageWindow = window as ImageWindow;
 
             if (imageWindow != null)
@@ -271,7 +271,7 @@ namespace WindowExe.Desktop
                 else
                 {
                     Debug.LogWarning(
-                        "[KeyFileMechanic] Key Image°¡ ºñ¾î ÀÖ½À´Ï´Ù.",
+                        "[KeyFileMechanic] Key Imageï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ö½ï¿½ï¿½Ï´ï¿½.",
                         this
                     );
                 }
@@ -279,15 +279,15 @@ namespace WindowExe.Desktop
             else
             {
                 Debug.LogWarning(
-                    "[KeyFileMechanic] key-image¿¡´Â " +
-                    "ImageWindow ÇÁ¸®ÆÕÀ» µî·ÏÇØ¾ß ÇÕ´Ï´Ù.",
+                    "[KeyFileMechanic] key-imageï¿½ï¿½ï¿½ï¿½ " +
+                    "ImageWindow ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Õ´Ï´ï¿½.",
                     this
                 );
             }
         }
 
         // ==========================================
-        // ÀÌ¸§ ¹Ù²Ù±â ½ÃÀÛ
+        // ï¿½Ì¸ï¿½ ï¿½Ù²Ù±ï¿½ ï¿½ï¿½ï¿½ï¿½
         // ==========================================
 
         private void BeginRename()
@@ -360,7 +360,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ÀÌ¸§ º¯°æ °á°ú °Ë»ç
+        // ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½
         // ==========================================
 
         private void FinishRename(string value)
@@ -375,37 +375,37 @@ namespace WindowExe.Desktop
 
             value = value == null ? "" : value.Trim();
 
-            // º¯°æÇÒ ÇÊ¿ä°¡ ¾ø´Â °æ¿ì
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ä°¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
             if (converted || value == initialFileName)
                 return;
 
-            // key.png°¡ ¾Æ´Ï¸é ½ÇÆÐ
+            // key.pngï¿½ï¿½ ï¿½Æ´Ï¸ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (value != correctFileName)
             {
                 ShowDialog(
-                    "ÀÌ¸§ ¹Ù²Ù±â",
-                    "ÆÄÀÏ ÀÌ¸§ÀÌ ¿Ã¹Ù¸£Áö ¾Ê½À´Ï´Ù.",
-                    "È®ÀÎ",
+                    "ì´ë¦„ ë°”ê¾¸ê¸°",
+                    "íŒŒì¼ ì´ë¦„ì´ ì˜¬ë°”ë¥´ì§€ ì•ŠìŠµë‹ˆë‹¤.",
+                    "í™•ì¸",
                     () => { }
                 );
 
                 return;
             }
 
-            // key.png ÀÔ·Â ¼º°ø
+            // key.png ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½
             ShowDialog(
-                "È®Àå¸í º¯°æ",
-                "ÆÄÀÏÀÇ È®Àå¸íÀ» º¯°æÇÏ¸é " +
-                "ÆÄÀÏÀ» »ç¿ëÇÒ ¼ö ¾ø°Ô µÉ ¼öµµ ÀÖ½À´Ï´Ù.\n" +
-                "±×·¡µµ º¯°æÇÏ½Ã°Ú½À´Ï±î?",
-                "È®ÀÎ",
+                "í™•ìž¥ëª… ë³€ê²½",
+                "íŒŒì¼ì˜ í™•ìž¥ëª…ì„ ë³€ê²½í•˜ë©´ " +
+                "íŒŒì¼ì„ ì‚¬ìš©í•  ìˆ˜ ì—†ê²Œ ë  ìˆ˜ë„ ìžˆìŠµë‹ˆë‹¤.\n" +
+                "ê·¸ëž˜ë„ ë³€ê²½í•˜ì‹œê² ìŠµë‹ˆê¹Œ?",
+                "í™•ì¸",
                 ConvertFile,
-                "Ãë¼Ò"
+                "ì·¨ì†Œ"
             );
         }
 
         // ==========================================
-        // key.txt -> key.png º¯È¯
+        // key.txt -> key.png ï¿½ï¿½È¯
         // ==========================================
 
         private void ConvertFile()
@@ -415,10 +415,10 @@ namespace WindowExe.Desktop
 
             converted = true;
 
-            // ÆÄÀÏ ÀÌ¸§ º¯°æ
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½
             icon.SetDisplayName("key.png");
 
-            // ¾ÆÀÌÄÜ ÀÌ¹ÌÁö º¯°æ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             Sprite resultIcon =
                 imageFileIcon != null
                     ? imageFileIcon
@@ -428,15 +428,15 @@ namespace WindowExe.Desktop
                 icon.SetIconSprite(resultIcon);
 
             Debug.Log(
-                "[KeyFileMechanic] key.txt -> key.png º¯È¯ ¼º°ø!"
+                "[KeyFileMechanic] key.txt -> key.png ï¿½ï¿½È¯ ï¿½ï¿½ï¿½ï¿½!"
             );
 
-            // ÀÌ¹ÌÁö Ã¢ ¿­±â
+            // ï¿½Ì¹ï¿½ï¿½ï¿½ Ã¢ ï¿½ï¿½ï¿½ï¿½
             OpenFile();
         }
 
         // ==========================================
-        // Å°º¸µå ÀÔ·Â
+        // Å°ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½
         // ==========================================
 
         private void Update()
@@ -454,12 +454,12 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ÆË¾÷ »ý¼º
+        // ï¿½Ë¾ï¿½ ï¿½ï¿½ï¿½ï¿½
         //
-        // Áß¿ä:
-        // »õ Canvas¸¦ ¸¸µéÁö ¾ÊÀ½
-        // Screen Space - Overlay »ç¿ëÇÏÁö ¾ÊÀ½
-        // ±âÁ¸ CanvasÀÇ Render Mode¸¦ º¯°æÇÏÁö ¾ÊÀ½
+        // ï¿½ß¿ï¿½:
+        // ï¿½ï¿½ Canvasï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+        // Screen Space - Overlay ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+        // ï¿½ï¿½ï¿½ï¿½ Canvasï¿½ï¿½ Render Modeï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         // ==========================================
 
         private RectTransform CreatePopupRoot(bool modal)
@@ -469,7 +469,7 @@ namespace WindowExe.Desktop
             if (parentCanvas == null)
             {
                 Debug.LogError(
-                    "[KeyFileMechanic] ºÎ¸ð Canvas¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.",
+                    "[KeyFileMechanic] ï¿½Î¸ï¿½ Canvasï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.",
                     this
                 );
 
@@ -478,8 +478,8 @@ namespace WindowExe.Desktop
 
             Canvas rootCanvas = parentCanvas.rootCanvas;
 
-            // Canvas ÄÄÆ÷³ÍÆ® ¾øÀÌ
-            // ±âÁ¸ Canvas ¾Æ·¡¿¡ UI ¿ÀºêÁ§Æ®¸¸ »ý¼º
+            // Canvas ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
+            // ï¿½ï¿½ï¿½ï¿½ Canvas ï¿½Æ·ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             GameObject go = new GameObject(
                 "KeyFilePopup",
                 typeof(RectTransform)
@@ -499,8 +499,8 @@ namespace WindowExe.Desktop
 
             Stretch(root);
 
-            // °æ°íÃ¢ÀÌ ¿­·ÈÀ» ¶§
-            // µÚÂÊ UI Å¬¸¯ ¹æÁö
+            // ï¿½ï¿½ï¿½Ã¢ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
+            // ï¿½ï¿½ï¿½ï¿½ UI Å¬ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (modal)
             {
                 RectTransform shield = CreatePanel(
@@ -522,7 +522,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ±âÁ¸ CanvasÀÇ Ä«¸Þ¶ó °¡Á®¿À±â
+        // ï¿½ï¿½ï¿½ï¿½ Canvasï¿½ï¿½ Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         // ==========================================
 
         private Camera GetPopupEventCamera()
@@ -534,7 +534,7 @@ namespace WindowExe.Desktop
 
             canvas = canvas.rootCanvas;
 
-            // Ä«¸Þ¶ó ±â¹Ý CanvasÀÎ °æ¿ì
+            // Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½ï¿½ Canvasï¿½ï¿½ ï¿½ï¿½ï¿½
             if (canvas.renderMode == RenderMode.ScreenSpaceCamera ||
                 canvas.renderMode == RenderMode.WorldSpace)
             {
@@ -543,13 +543,13 @@ namespace WindowExe.Desktop
                     : Camera.main;
             }
 
-            // ±âÁ¸ Canvas°¡ OverlayÀÎ °æ¿ì¿¡µµ
-            // ¼³Á¤À» º¯°æÇÏÁö ¾ÊÀ½
+            // ï¿½ï¿½ï¿½ï¿½ Canvasï¿½ï¿½ Overlayï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             return null;
         }
 
         // ==========================================
-        // °æ°íÃ¢ »ý¼º
+        // ï¿½ï¿½ï¿½Ã¢ ï¿½ï¿½ï¿½ï¿½
         // ==========================================
 
         private void ShowDialog(
@@ -566,7 +566,7 @@ namespace WindowExe.Desktop
             if (root == null)
                 return;
 
-            // Ã¢ ¹è°æ
+            // Ã¢ ï¿½ï¿½ï¿½
             RectTransform panel = CreatePanel(
                 root,
                 "Dialog",
@@ -576,7 +576,7 @@ namespace WindowExe.Desktop
 
             panel.anchoredPosition = Vector2.zero;
 
-            // Á¦¸ñ Ç¥½ÃÁÙ
+            // ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½ï¿½ï¿½ï¿½
             RectTransform bar = CreatePanel(
                 panel,
                 "TitleBar",
@@ -601,7 +601,7 @@ namespace WindowExe.Desktop
             titleLabel.rectTransform.offsetMin =
                 new Vector2(10f, 0f);
 
-            // °æ°í ¸Þ½ÃÁö
+            // ï¿½ï¿½ï¿½ ï¿½Þ½ï¿½ï¿½ï¿½
             Text body = CreateText(
                 panel,
                 "Message",
@@ -623,7 +623,7 @@ namespace WindowExe.Desktop
             body.verticalOverflow =
                 VerticalWrapMode.Overflow;
 
-            // È®ÀÎ ¹öÆ°
+            // È®ï¿½ï¿½ ï¿½ï¿½Æ°
             float okX =
                 cancelText == null ? 0f : -64f;
 
@@ -647,7 +647,7 @@ namespace WindowExe.Desktop
                 new Vector2(116f, 37f)
             );
 
-            // Ãë¼Ò ¹öÆ°
+            // ï¿½ï¿½ï¿½ ï¿½ï¿½Æ°
             if (cancelText != null)
             {
                 Button cancel = CreateButton(
@@ -667,7 +667,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // UI »ý¼º º¸Á¶ ÇÔ¼ö
+        // UI ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
         // ==========================================
 
         private RectTransform CreatePanel(
@@ -760,7 +760,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ÆùÆ®
+        // ï¿½ï¿½Æ®
         // ==========================================
 
         private Font ResolveFont()
@@ -787,7 +787,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // RectTransform ¹èÄ¡
+        // RectTransform ï¿½ï¿½Ä¡
         // ==========================================
 
         private static void Place(
@@ -818,7 +818,7 @@ namespace WindowExe.Desktop
         }
 
         // ==========================================
-        // ÆË¾÷ Á¦°Å
+        // ï¿½Ë¾ï¿½ ï¿½ï¿½ï¿½ï¿½
         // ==========================================
 
         private void DestroyOverlay()

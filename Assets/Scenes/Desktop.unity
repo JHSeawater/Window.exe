@@ -1376,7 +1376,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79d7dbbff55cd4d44ba47918eadb6658, type: 3}
   m_Name: 
   m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.WifiConnection
-  isConnected: 1
+  isConnected: 0
 --- !u!4 &1158675612
 Transform:
   m_ObjectHideFlags: 0
@@ -1759,7 +1759,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 879939670406675630, guid: 21a87040bcf9e0d46bf508c519fb4182, type: 3}
       propertyPath: m_Text
-      value: "뷁쀍꿻뛟.png"
+      value: "\uBDC1\uC00D\uAFFB\uB6DF.png"
       objectReference: {fileID: 0}
     - target: {fileID: 1755284717155794198, guid: 21a87040bcf9e0d46bf508c519fb4182, type: 3}
       propertyPath: m_Sprite
@@ -2509,7 +2509,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 89565245537d8fa458a9dac0c8a2b948, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: WindowExe.BossFight::WindowExe.BossFight.LockWarningBossEntry
   fight: {fileID: 1947555532}
 --- !u!114 &1947555532
@@ -2522,7 +2522,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ded30f2aea0ffe54f9e839d2c884a1e5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: WindowExe.BossFight::WindowExe.BossFight.BossFightController
   settings: {fileID: 11400000, guid: 92cc8272e43ed984c90b786f642331c3, type: 2}
   windowPrefab: {fileID: 7597616435688527204, guid: 2ef4bc2f092e3534d85ab11b466c75d8, type: 3}
