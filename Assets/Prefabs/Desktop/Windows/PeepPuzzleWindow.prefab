@@ -631,6 +631,7 @@ GameObject:
   - component: {fileID: 6632389563995722390}
   - component: {fileID: 3764053350605404104}
   - component: {fileID: 6173393365077100815}
+  - component: {fileID: 3303500244530871519}
   m_Layer: 0
   m_Name: Clue 3
   m_TagString: Untagged
@@ -801,6 +802,27 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 3764053350605404104}
   m_maskType: 0
+--- !u!114 &3303500244530871519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 744062493015939410}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36e9d2855832243efac96d414311a55f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
+  objectType: 0
+  defaultSprite: {fileID: 0}
+  activeSprite: {fileID: 0}
+  completedSprite: {fileID: 0}
+  clickSound: {fileID: 0}
+  fallbackSize: {x: 0.8, y: 0.8}
+  onClicked:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &917788524556463977
 GameObject:
   m_ObjectHideFlags: 0
@@ -812,6 +834,7 @@ GameObject:
   - component: {fileID: 5765263176607293171}
   - component: {fileID: 6276390838753239259}
   - component: {fileID: 974270326556277814}
+  - component: {fileID: 6589730500586166449}
   m_Layer: 0
   m_Name: Clue 1
   m_TagString: Untagged
@@ -982,6 +1005,27 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 6276390838753239259}
   m_maskType: 0
+--- !u!114 &6589730500586166449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 917788524556463977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36e9d2855832243efac96d414311a55f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
+  objectType: 0
+  defaultSprite: {fileID: 0}
+  activeSprite: {fileID: 0}
+  completedSprite: {fileID: 0}
+  clickSound: {fileID: 0}
+  fallbackSize: {x: 0.8, y: 0.8}
+  onClicked:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1196190060721746582
 GameObject:
   m_ObjectHideFlags: 0
@@ -1519,10 +1563,9 @@ MonoBehaviour:
   loadGameOverScene: 1
   gameOverSceneName: YouAreDie
   clues:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 6589730500586166449}
+  - {fileID: 6982937998469435681}
+  - {fileID: 3303500244530871519}
   dangerObjects:
   - {fileID: 5607276096476999165}
   watcherObjects:
@@ -1549,6 +1592,7 @@ GameObject:
   - component: {fileID: 4257899233770263586}
   - component: {fileID: 4461853116190029899}
   - component: {fileID: 7866508782404260940}
+  - component: {fileID: 6982937998469435681}
   m_Layer: 0
   m_Name: Clue 2
   m_TagString: Untagged
@@ -1719,6 +1763,27 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 4461853116190029899}
   m_maskType: 0
+--- !u!114 &6982937998469435681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3712942991557003555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36e9d2855832243efac96d414311a55f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WindowExe.Desktop::WindowExe.Desktop.Desktop.Window.PeepPuzzleObject
+  objectType: 0
+  defaultSprite: {fileID: 0}
+  activeSprite: {fileID: 0}
+  completedSprite: {fileID: 0}
+  clickSound: {fileID: 0}
+  fallbackSize: {x: 0.8, y: 0.8}
+  onClicked:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &3962062941279241626
 GameObject:
   m_ObjectHideFlags: 0

@@ -108,8 +108,41 @@ namespace WindowExe.Desktop.Desktop.Window
             var handles = transform.Find("ResizeHandle");
             if (handles != null) handles.gameObject.SetActive(false);
 
+            ResolveMissingPuzzleObjects();
             ApplySecondarySorting();
             UpdateEscapeLockState();
+        }
+
+        private void ResolveMissingPuzzleObjects()
+        {
+            var secondary = transform.Find("Secondary");
+            if (secondary == null) return;
+
+            // Danger 오브젝트 자동 복구
+            if (dangerObjects == null || dangerObjects.Count == 0 || (dangerObjects.Count > 0 && dangerObjects[0] == null))
+            {
+                dangerObjects = new List<PeepPuzzleObject>();
+                foreach (var obj in secondary.GetComponentsInChildren<PeepPuzzleObject>(true))
+                {
+                    if (obj != null && (obj.ObjectType == PeepObjectType.Danger || obj.name.IndexOf("danger", StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        dangerObjects.Add(obj);
+                    }
+                }
+            }
+
+            // Watcher 오브젝트 자동 복구
+            if (watcherObjects == null || watcherObjects.Count == 0 || (watcherObjects.Count > 0 && watcherObjects[0] == null))
+            {
+                watcherObjects = new List<PeepPuzzleObject>();
+                foreach (var obj in secondary.GetComponentsInChildren<PeepPuzzleObject>(true))
+                {
+                    if (obj != null && (obj.ObjectType == PeepObjectType.Watcher || obj.name.IndexOf("watcher", StringComparison.OrdinalIgnoreCase) >= 0))
+                    {
+                        watcherObjects.Add(obj);
+                    }
+                }
+            }
         }
 
         public void SetupPuzzleObjects(
@@ -213,12 +246,12 @@ namespace WindowExe.Desktop.Desktop.Window
 
         private void Update()
         {
-            if (DesktopInputRouter.IsWorldInputBlocked) return;
             if (isCleared || isGameOver) return;
 
+            // 창 드래그 중(DesktopInputRouter.IsWorldInputBlocked)이어도 WINDOW.exe로 비추는 동안 타이머는 흘러야 함
             ManualTick(Time.deltaTime);
 
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            if (!DesktopInputRouter.IsWorldInputBlocked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             {
                 ProcessMouseClick();
             }
@@ -391,45 +424,95 @@ namespace WindowExe.Desktop.Desktop.Window
 
             viewport = default;
             var wm = Manager != null ? Manager : WindowManager.Instance;
-            if (wm == null) return false;
+            Window targetWindow = null;
 
-            var process = wm.GetProcess(targetWindowId);
-            // targetWindowId로 찾은 프로세스가 자기 자신이거나 유효하지 않으면 윈도우(WINDOW.exe)를 스마트 탐색
-            if (process == null || ReferenceEquals(process.Instance, this) || !process.Instance.gameObject.activeInHierarchy)
+            if (wm != null)
             {
-                process = null;
-                // 1순위: "window" 프로세스
-                var winProc = wm.GetProcess("window");
-                if (winProc != null && !ReferenceEquals(winProc.Instance, this) && winProc.Instance.gameObject.activeInHierarchy)
+                // 1순위: 지정된 targetWindowId로 프로세스 검색
+                if (!string.IsNullOrEmpty(targetWindowId))
                 {
-                    process = winProc;
-                }
-                // 2순위: WindowExeWindow 타입의 창 탐색
-                if (process == null)
-                {
-                    foreach (var p in wm.ActiveProcesses)
+                    var proc = wm.GetProcess(targetWindowId);
+                    if (proc != null && !ReferenceEquals(proc.Instance, this) && proc.State != WindowState.Minimized && proc.Instance != null && proc.Instance.gameObject.activeInHierarchy)
                     {
-                        if (p.Instance is WindowExeWindow && !ReferenceEquals(p.Instance, this) && p.Instance.gameObject.activeInHierarchy)
+                        targetWindow = proc.Instance;
+                    }
+                }
+
+                // 2순위: "window", "WINDOW.exe" 프로세스 또는 WindowExeWindow 인스턴스 검색
+                if (targetWindow == null)
+                {
+                    foreach (var proc in wm.ActiveProcesses)
+                    {
+                        if (proc == null || ReferenceEquals(proc.Instance, this) || proc.State == WindowState.Minimized || proc.Instance == null || !proc.Instance.gameObject.activeInHierarchy)
+                            continue;
+
+                        if (string.Equals(proc.Id, "window", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(proc.Id, "WINDOW.exe", StringComparison.OrdinalIgnoreCase) ||
+                            proc.Instance is WindowExeWindow)
                         {
-                            process = p;
+                            targetWindow = proc.Instance;
                             break;
                         }
                     }
                 }
             }
 
-            if (process == null || process.State == WindowState.Minimized || process.Instance == null || !process.Instance.gameObject.activeInHierarchy)
+            // 3순위: 씬 전체에서 WindowExeWindow 탐색 (Fallback)
+            if (targetWindow == null)
             {
-                return false;
+                var exeWindows = UnityEngine.Object.FindObjectsByType<WindowExeWindow>(FindObjectsSortMode.None);
+                for (var i = 0; i < exeWindows.Length; i++)
+                {
+                    var candidate = exeWindows[i];
+                    if (candidate != null && !ReferenceEquals(candidate, this) && candidate.gameObject.activeInHierarchy)
+                    {
+                        targetWindow = candidate;
+                        break;
+                    }
+                }
             }
 
-            viewport = process.Instance.OuterBounds;
+            if (targetWindow == null) return false;
+
+            viewport = GetWindowWorldRect(targetWindow);
             return true;
+        }
+
+        private static Rect GetWindowWorldRect(Window window)
+        {
+            if (window == null) return default;
+            Rect local = Rect.MinMaxRect(
+                -window.Size.x * 0.5f,
+                -window.Size.y * 0.5f,
+                window.Size.x * 0.5f,
+                window.Size.y * 0.5f + window.BarHeight
+            );
+            return TransformRectToWorld(local, window.transform);
+        }
+
+        private static Rect TransformRectToWorld(Rect rect, Transform t)
+        {
+            if (t == null) return rect;
+            Vector3 a = t.TransformPoint(new Vector3(rect.xMin, rect.yMin, 0f));
+            Vector3 b = t.TransformPoint(new Vector3(rect.xMax, rect.yMin, 0f));
+            Vector3 c = t.TransformPoint(new Vector3(rect.xMax, rect.yMax, 0f));
+            Vector3 d = t.TransformPoint(new Vector3(rect.xMin, rect.yMax, 0f));
+
+            float minX = Mathf.Min(Mathf.Min(a.x, b.x), Mathf.Min(c.x, d.x));
+            float maxX = Mathf.Max(Mathf.Max(a.x, b.x), Mathf.Max(c.x, d.x));
+            float minY = Mathf.Min(Mathf.Min(a.y, b.y), Mathf.Min(c.y, d.y));
+            float maxY = Mathf.Max(Mathf.Max(a.y, b.y), Mathf.Max(c.y, d.y));
+
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
         }
 
         private static bool IsObjectInViewport(PeepPuzzleObject obj, Rect viewport)
         {
             if (obj == null) return false;
+            // 1. 오브젝트의 월드 위치(중심)가 뷰포트 안에 들어있는 경우
+            if (viewport.Contains(obj.transform.position)) return true;
+
+            // 2. 오브젝트의 월드 바운즈와 뷰포트가 겹치는 경우
             var bounds = obj.WorldBounds;
             var objRect = Rect.MinMaxRect(bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y);
             return viewport.Overlaps(objRect);
@@ -460,7 +543,15 @@ namespace WindowExe.Desktop.Desktop.Window
 
             if (loadGameOverScene && Application.isPlaying && !string.IsNullOrEmpty(gameOverSceneName))
             {
-                SceneManager.LoadScene(gameOverSceneName);
+                try
+                {
+                    SceneManager.LoadScene(gameOverSceneName);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[PeepPuzzleWindow] Failed to load game over scene '{gameOverSceneName}': {e.Message}. Trying fallback 'Assets/Scenes/YouAreDie.unity'...");
+                    SceneManager.LoadScene("Assets/Scenes/YouAreDie.unity");
+                }
             }
         }
 
